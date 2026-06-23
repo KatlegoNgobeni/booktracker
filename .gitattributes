@@ -1,0 +1,6 @@
+# Normalize line endings for all text files (author on any OS)
+* text=auto
+
+# Force LF line endings for shell scripts so they execute correctly inside
+# Linux containers when authored on Windows/WSL2 (CRLF would corrupt the shebang)
+*.sh text eol=lf
