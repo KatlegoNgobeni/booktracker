@@ -17,7 +17,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration tests for POST /api/auth/register using a real PostgreSQL 16
+ * Integration tests for POST /auth/register using a real PostgreSQL 16
  * container (Testcontainers) and a full Spring context with a random HTTP port.
  *
  * <p>Follows the Testcontainers + @DynamicPropertySource pattern established in
@@ -87,7 +87,7 @@ class AuthIntegrationTest {
         );
 
         ResponseEntity<Map> response = restTemplate.postForEntity(
-            "/api/auth/register", body, Map.class);
+            "/auth/register", body, Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
@@ -128,12 +128,12 @@ class AuthIntegrationTest {
 
         // First registration succeeds
         ResponseEntity<Map> first = restTemplate.postForEntity(
-            "/api/auth/register", body, Map.class);
+            "/auth/register", body, Map.class);
         assertThat(first.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
         // Second registration with the same email must return 409
         ResponseEntity<Map> second = restTemplate.postForEntity(
-            "/api/auth/register", body, Map.class);
+            "/auth/register", body, Map.class);
         assertThat(second.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
 
         Map<?, ?> errorBody = second.getBody();
