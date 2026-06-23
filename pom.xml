@@ -19,6 +19,11 @@
 
     <properties>
         <java.version>21</java.version>
+        <!-- Override Testcontainers version to 1.21.4 which ships with docker-java 3.4.2.
+             This is required in WSL2 with Docker 29.x (daemon API minimum = 1.44).
+             Testcontainers 1.20.5 (Spring Boot 3.4.3 BOM default) bundles docker-java 3.4.1
+             which sends /v1.32/ API requests that Docker 29.x refuses. -->
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
     <dependencies>
@@ -72,6 +77,25 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Testcontainers — PostgreSQL 16 container for integration tests.
+             Uses Spring Boot BOM-managed version; no explicit version needed.
+             testcontainers-junit-jupiter provides @Testcontainers/@Container annotations. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
