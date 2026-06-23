@@ -3,6 +3,7 @@ package com.booktracker.auth;
 import com.booktracker.security.JwtUtil;
 import com.booktracker.user.UserEntity;
 import com.booktracker.user.UserRepository;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -67,6 +68,48 @@ public class AuthService {
             saved.getEmail(),
             saved.getDisplayName(),
             saved.getCreatedAt()
+        );
+
+        return new AuthResponse(token, userDto);
+    }
+
+    /**
+     * Authenticates a user by email and password, issues a JWT on success.
+     *
+     * <p><strong>Approach (documented per plan):</strong> We load the user by email via
+     * {@code UserRepository.findByEmail}, then use {@code PasswordEncoder.matches} to compare
+     * the provided password against the stored BCrypt hash. This keeps
+     * {@code UserService.loadUserByUsername} (UUID-based) intact for the JWT filter pipeline
+     * while allowing email-based authentication at login without an AuthenticationManager
+     * circular dependency.
+     *
+     * <p><strong>D-03 — no field leakage:</strong> Both "unknown email" and "wrong password"
+     * throw {@code BadCredentialsException} with the same message. The caller should NOT
+     * distinguish between the two cases. {@code GlobalExceptionHandler} maps this to a
+     * generic 401 {@code {"message": "Invalid credentials"}}.
+     *
+     * @param request validated login payload (email + password)
+     * @return authentication response with token and user DTO (D-05 shape)
+     * @throws BadCredentialsException if email is not found or password does not match (D-03)
+     */
+    public AuthResponse login(LoginRequest request) {
+        // T-02-07: Use the same exception for unknown-email AND wrong-password to prevent
+        // email enumeration. GlobalExceptionHandler maps to identical 401 response.
+        UserEntity user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            throw new BadCredentialsException("Invalid credentials");
+        }
+
+        // D-06: sub = UUID string; D-05: same response shape as register
+        String token = jwtUtil.generateToken(user.getId().toString());
+
+        AuthResponse.UserDto userDto = new AuthResponse.UserDto(
+                user.getId().toString(),
+                user.getEmail(),
+                user.getDisplayName(),
+                user.getCreatedAt()
         );
 
         return new AuthResponse(token, userDto);

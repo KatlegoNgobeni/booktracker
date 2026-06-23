@@ -37,4 +37,21 @@ public class AuthController {
         AuthResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
+    /**
+     * POST /api/auth/login — authenticate with email and password, receive JWT (AUTH-02, D-05).
+     *
+     * <p>Returns 200 OK with the same {@link AuthResponse} shape as register (token + user).
+     * On invalid credentials, {@code BadCredentialsException} propagates to
+     * {@code GlobalExceptionHandler} which returns 401 {@code {"message": "Invalid credentials"}}
+     * — identical message for wrong-password and unknown-email (D-03, T-02-07).
+     *
+     * @param request validated login payload ({@code @Valid} triggers @NotBlank constraints)
+     * @return 200 OK with token and user DTO; 401 on bad credentials; 400 on blank fields
+     */
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+        AuthResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
+    }
 }

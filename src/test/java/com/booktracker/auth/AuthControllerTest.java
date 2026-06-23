@@ -1,5 +1,7 @@
 package com.booktracker.auth;
 
+import com.booktracker.security.JwtUtil;
+import com.booktracker.user.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
@@ -46,6 +48,23 @@ class AuthControllerTest {
      */
     @MockitoBean
     private AuthService authService;
+
+    /**
+     * Mock JwtUtil — required because JwtAuthenticationFilter is a @Component that gets
+     * loaded into the @WebMvcTest context even when SecurityAutoConfiguration is excluded.
+     * (SecurityFilterAutoConfiguration exclusion prevents the filter chain from running,
+     * but the bean must still be constructable.)
+     */
+    @MockitoBean
+    private JwtUtil jwtUtil;
+
+    /**
+     * Mock UserService — satisfies JwtAuthenticationFilter's UserDetailsService injection.
+     * UserService implements UserDetailsService, so a single mock satisfies both constructor
+     * parameters of JwtAuthenticationFilter.
+     */
+    @MockitoBean
+    private UserService userService;
 
     /**
      * AUTH-01: An invalid email format must return 400 Bad Request with
