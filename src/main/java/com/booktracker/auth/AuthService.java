@@ -7,7 +7,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 /**
- * Business logic for user registration.
+ * Business logic for user registration and login.
  *
  * <p>Follows the "Don't Hand-Roll" principle (RESEARCH.md):
  * <ul>
@@ -15,13 +15,17 @@ import org.springframework.stereotype.Service;
  *   <li>Duplicate email detection via DB constraint + {@code DataIntegrityViolationException}
  *       (not a pre-check with {@code findByEmail} — race-condition-safe)</li>
  *   <li>JWT issuance via {@code JwtUtil} — not hand-rolled Base64</li>
+ *   <li>Credential verification via {@code AuthenticationManager/DaoAuthenticationProvider}
+ *       (not a manual BCrypt compare — handles timing attacks and normalization)</li>
  * </ul>
  *
- * <p>Implements {@code UserDetailsService} so Spring Security's
- * {@code DaoAuthenticationProvider} (added in plan 02) can load users by UUID string.
+ * <p><strong>UserDetailsService:</strong> Moved to {@code UserService} in plan 02-02 to avoid
+ * ambiguous bean resolution when the DaoAuthenticationProvider is added. AuthService uses
+ * an explicit email lookup for login, while UserService provides UUID-based loading for the
+ * JWT filter pipeline.
  */
 @Service
-public class AuthService implements org.springframework.security.core.userdetails.UserDetailsService {
+public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -68,20 +72,4 @@ public class AuthService implements org.springframework.security.core.userdetail
         return new AuthResponse(token, userDto);
     }
 
-    /**
-     * Loads a user by their UUID string (the JWT {@code sub} claim).
-     * Used by Spring Security's filter pipeline (plan 02) — not by plan 01 register flow.
-     *
-     * @param uuid the UUID string from the JWT sub claim
-     * @return the UserEntity as UserDetails
-     * @throws org.springframework.security.core.userdetails.UsernameNotFoundException
-     *         if no user with that UUID exists
-     */
-    @Override
-    public org.springframework.security.core.userdetails.UserDetails loadUserByUsername(String uuid)
-            throws org.springframework.security.core.userdetails.UsernameNotFoundException {
-        return userRepository.findById(java.util.UUID.fromString(uuid))
-                .orElseThrow(() -> new org.springframework.security.core.userdetails.UsernameNotFoundException(
-                        "User not found: " + uuid));
-    }
 }
