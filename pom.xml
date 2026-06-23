@@ -68,6 +68,29 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- JWT — jjwt 0.12.x (locked by CLAUDE.md).
+             jjwt-api: compile scope (API surface used in production code).
+             jjwt-impl: runtime scope (implementation — never import directly).
+             jjwt-jackson: runtime scope (Jackson-based JWT JSON serialization required
+             because Spring Boot Web includes Jackson on the classpath). -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.6</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
