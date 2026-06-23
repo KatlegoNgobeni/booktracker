@@ -1,5 +1,7 @@
 package com.booktracker.health;
 
+import com.booktracker.security.JwtUtil;
+import com.booktracker.user.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
@@ -30,6 +32,23 @@ class HealthControllerTest {
      */
     @MockitoBean
     private DbHealthIndicator dbHealthIndicator;
+
+    /**
+     * Mock JwtUtil — required because JwtAuthenticationFilter is a @Component scanned
+     * into the @WebMvcTest context even when SecurityAutoConfiguration is excluded.
+     * (SecurityFilterAutoConfiguration exclusion prevents the filter chain from running,
+     * but the bean must still be constructable.) Added in plan 02-02 when JwtAuthenticationFilter
+     * was introduced.
+     */
+    @MockitoBean
+    private JwtUtil jwtUtil;
+
+    /**
+     * Mock UserService — satisfies JwtAuthenticationFilter's UserDetailsService injection.
+     * UserService implements UserDetailsService, so one mock covers both.
+     */
+    @MockitoBean
+    private UserService userService;
 
     @Test
     void healthEndpointReturns200WithStatusOk() throws Exception {
