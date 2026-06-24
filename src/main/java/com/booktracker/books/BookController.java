@@ -25,9 +25,10 @@ import java.util.List;
  *
  * <p>The {@code olKey} path variable in the detail endpoint is passed as a URI-template
  * variable to {@link OpenLibraryClient#getWork} — never concatenated into a URL string
- * (T-03-05 SSRF mitigation). The canonical {@code olKey} format is the full path form
- * {@code /works/OL45804W} (as returned from search results and stored in the DB) — see
- * RESEARCH.md open question 2.
+ * (T-03-05 SSRF mitigation). The {@code olKey} URL segment must be the bare short form
+ * (e.g. {@code OL45804W}), NOT the full path form ({@code /works/OL45804W}).
+ * The DB stores the full form internally; {@link BookService#getOrFetch} prepends
+ * {@code /works/} before querying or persisting.
  */
 @RestController
 @RequestMapping("/books")
@@ -77,7 +78,8 @@ public class BookController {
      * {@link OpenLibraryClient#getWork} to the correct HTTP status — no handler change needed
      * in {@link com.booktracker.GlobalExceptionHandler}.
      *
-     * @param olKey the Open Library work key (e.g. {@code /works/OL45804W})
+     * @param olKey the Open Library work key in short form (e.g. {@code OL45804W}),
+     *              NOT the full path form — the full form is only used for DB storage
      * @return book detail DTO with all D-07 fields
      */
     @GetMapping("/{olKey}")

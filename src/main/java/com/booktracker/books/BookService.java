@@ -62,11 +62,13 @@ public class BookService {
      * <p>Cache miss: calls {@link OpenLibraryClient#getWork}, maps the response to a
      * {@link BookEntity}, saves it, and returns a {@link BookDetailDto} mapped from the saved entity.
      *
-     * <p>Key normalization: the controller receives the raw path-segment form (e.g. {@code OL45804W}).
-     * This method normalizes to the full form (e.g. {@code /works/OL45804W}) used for DB storage and
-     * lookup, consistent with the {@code key} field returned by Open Library search results.
+     * <p>Key normalization: the controller receives only the short-form path segment
+     * (e.g. {@code OL45804W}). This method prepends {@code /works/} to form the full
+     * canonical key (e.g. {@code /works/OL45804W}) used for DB storage and lookup.
      * {@link OpenLibraryClient#getWork} is called with the short form (path variable in
      * {@code /works/{olKey}.json}).
+     * The full-path form ({@code /works/OL45804W}) as a URL segment is NOT supported —
+     * Spring MVC only captures one path segment for {@code /{olKey}}.
      *
      * <p>Error cases (propagated to the controller):
      * <ul>
@@ -78,18 +80,19 @@ public class BookService {
      * a second {@code findByOpenLibraryKey} is run to retrieve the row inserted by the
      * concurrent request (TOCTOU recovery — see class Javadoc).
      *
-     * @param olKey the Open Library work key — either short form ({@code OL45804W}) or
-     *              full form ({@code /works/OL45804W}); normalized internally
+     * @param olKey the Open Library work key in short form ({@code OL45804W});
+     *              the full form ({@code /works/OL45804W}) is NOT accepted here —
+     *              it is produced internally before DB operations
      * @return book detail DTO
      * @throws org.springframework.web.server.ResponseStatusException on 404 or timeout
      */
     public BookDetailDto getOrFetch(String olKey) {
-        // Normalize to full canonical form (/works/OL45804W) for DB lookup and entity storage.
-        // The Open Library search response returns the full /works/OLxxxxW key; the URL path
-        // segment may be either the short or full form.
-        String fullKey = olKey.startsWith("/works/") ? olKey : "/works/" + olKey;
-        // Short form for the getWork URI template (/works/{olKey}.json)
-        String shortKey = fullKey.startsWith("/works/") ? fullKey.substring("/works/".length()) : fullKey;
+        // olKey is the bare short form from the URL segment (e.g. "OL45804W").
+        // Prepend /works/ to form the full canonical key used for DB storage and lookup.
+        // The URL only ever delivers the short form — Spring MVC /{olKey} captures one segment.
+        String fullKey = "/works/" + olKey;
+        // Short form for the getWork URI template (/works/{olKey}.json) — same as input olKey
+        String shortKey = olKey;
 
         return bookRepository.findByOpenLibraryKey(fullKey)
                 .map(this::toDetailDto)
