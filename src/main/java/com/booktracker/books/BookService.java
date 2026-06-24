@@ -1,7 +1,9 @@
 package com.booktracker.books;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -141,9 +143,14 @@ public class BookService {
      * converted to String to match the {@code cover_id varchar} column in the schema.
      */
     private BookEntity toEntity(String olKey, OpenLibraryWorkResponse work) {
+        String title = work.getTitle();
+        if (title == null || title.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "Open Library returned a work without a title: " + olKey);
+        }
         BookEntity entity = new BookEntity();
         entity.setOpenLibraryKey(olKey);
-        entity.setTitle(work.getTitle());
+        entity.setTitle(title);
         entity.setAuthors(null); // works endpoint returns author objects, not strings — Phase 3 scope
         entity.setPageCount(work.getPageCount());
         entity.setFirstPublishYear(null); // not available on works endpoint write path
