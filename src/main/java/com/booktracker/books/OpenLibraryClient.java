@@ -1,13 +1,22 @@
 package com.booktracker.books;
 
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
 /**
- * HTTP client wrapper for the Open Library {@code /search.json} API.
+ * HTTP client wrapper for the Open Library API.
+ *
+ * <p>Provides two operations:
+ * <ol>
+ *   <li>{@link #search} — proxies {@code /search.json} (Plan 01)</li>
+ *   <li>{@link #getWork} — fetches {@code /works/{olKey}.json} with caching via BookService (Plan 02)</li>
+ * </ol>
  *
  * <p>Injects the {@code openLibraryRestClient} bean configured in
  * {@link OpenLibraryConfig} (User-Agent header + connect/read timeouts).
@@ -22,6 +31,11 @@ import java.util.List;
  *       in the DTO; it is null-guarded before {@code String.valueOf} conversion.</li>
  *   <li>Null response / null docs → empty list, never a NullPointerException.</li>
  * </ul>
+ *
+ * <p>Security (T-03-05): The {@code olKey} in {@link #getWork} is bound only as a
+ * {@code {olKey}} URI-template variable on the fixed base URL configured via
+ * {@code openlibrary.base-url}. RestClient URL-encodes path variables and never
+ * follows arbitrary user-supplied URLs — no SSRF vector.
  */
 @Component
 public class OpenLibraryClient {
@@ -65,5 +79,42 @@ public class OpenLibraryClient {
                         doc.getFirstPublishYear()
                 ))
                 .toList();
+    }
+
+    /**
+     * Fetch a work's detail from Open Library.
+     *
+     * <p>Maps Open Library error responses:
+     * <ul>
+     *   <li>HTTP 404 → {@code ResponseStatusException(NOT_FOUND, "Book not found in Open Library: {olKey}")}</li>
+     *   <li>Connect/read timeout ({@code ResourceAccessException}) → {@code ResponseStatusException(SERVICE_UNAVAILABLE)}</li>
+     * </ul>
+     *
+     * <p>The {@code olKey} is passed only as a URI-template variable (e.g. {@code /works/OL45804W.json})
+     * — it is never concatenated into the base URL (T-03-05 SSRF mitigation).
+     *
+     * @param olKey the full Open Library work key (e.g. {@code /works/OL45804W})
+     * @return the deserialized work response
+     * @throws ResponseStatusException with {@code NOT_FOUND} if Open Library returns 404
+     * @throws ResponseStatusException with {@code SERVICE_UNAVAILABLE} on connect/read timeout
+     */
+    public OpenLibraryWorkResponse getWork(String olKey) {
+        try {
+            return restClient.get()
+                    .uri("/works/{olKey}.json", olKey)
+                    .retrieve()
+                    .onStatus(
+                            status -> status.value() == 404,
+                            (req, res) -> {
+                                throw new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
+                                        "Book not found in Open Library: " + olKey);
+                            })
+                    .body(OpenLibraryWorkResponse.class);
+        } catch (ResourceAccessException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Open Library is temporarily unavailable");
+        }
     }
 }
