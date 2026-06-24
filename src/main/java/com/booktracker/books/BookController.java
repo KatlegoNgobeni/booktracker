@@ -1,5 +1,7 @@
 package com.booktracker.books;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,14 +53,14 @@ public class BookController {
      *
      * @param q    non-blank search query
      * @param page 0-based page index (default 0)
-     * @param size page size (default 10)
+     * @param size page size (default 10, min 1, max 100)
      * @return list of matching books mapped to the D-06 DTO shape
      */
     @GetMapping("/search")
     public List<BookSearchResultDto> search(
             @RequestParam @NotBlank String q,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") @Min(1) @Max(100) int size) {
         return bookService.search(q, page, size);
     }
 
