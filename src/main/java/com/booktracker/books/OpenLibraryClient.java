@@ -2,6 +2,7 @@ package com.booktracker.books;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
@@ -55,16 +56,26 @@ public class OpenLibraryClient {
      * @return list of mapped {@link BookSearchResultDto}; empty list if response is null
      */
     public List<BookSearchResultDto> search(String q, int page, int size) {
-        OpenLibrarySearchResponse response = restClient.get()
-                .uri(uriBuilder -> uriBuilder
-                        .path("/search.json")
-                        .queryParam("q", q)
-                        .queryParam("fields", "key,title,author_name,cover_i,first_publish_year")
-                        .queryParam("page", page + 1)
-                        .queryParam("limit", size)
-                        .build())
-                .retrieve()
-                .body(OpenLibrarySearchResponse.class);
+        OpenLibrarySearchResponse response;
+        try {
+            response = restClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/search.json")
+                            .queryParam("q", q)
+                            .queryParam("fields", "key,title,author_name,cover_i,first_publish_year")
+                            .queryParam("page", page + 1)
+                            .queryParam("limit", size)
+                            .build())
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, (req, res) -> {
+                        throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                                "Open Library search failed: " + res.getStatusCode());
+                    })
+                    .body(OpenLibrarySearchResponse.class);
+        } catch (ResourceAccessException e) {
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Open Library is temporarily unavailable");
+        }
 
         if (response == null || response.getDocs() == null) {
             return List.of();
@@ -103,13 +114,16 @@ public class OpenLibraryClient {
             return restClient.get()
                     .uri("/works/{olKey}.json", olKey)
                     .retrieve()
-                    .onStatus(
-                            status -> status.value() == 404,
-                            (req, res) -> {
-                                throw new ResponseStatusException(
-                                        HttpStatus.NOT_FOUND,
-                                        "Book not found in Open Library: " + olKey);
-                            })
+                    .onStatus(HttpStatusCode::isError, (req, res) -> {
+                        if (res.getStatusCode().value() == 404) {
+                            throw new ResponseStatusException(
+                                    HttpStatus.NOT_FOUND,
+                                    "Book not found in Open Library: " + olKey);
+                        }
+                        throw new ResponseStatusException(
+                                HttpStatus.BAD_GATEWAY,
+                                "Open Library returned an error: " + res.getStatusCode());
+                    })
                     .body(OpenLibraryWorkResponse.class);
         } catch (ResourceAccessException e) {
             throw new ResponseStatusException(
