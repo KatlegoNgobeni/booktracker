@@ -3,6 +3,7 @@ package com.booktracker.books;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -78,9 +79,9 @@ public class BookService {
      *   <li>Open Library timeout → {@code ResponseStatusException(SERVICE_UNAVAILABLE)}</li>
      * </ul>
      *
-     * <p>Concurrent-save race: {@link DataIntegrityViolationException} on save is caught;
-     * a second {@code findByOpenLibraryKey} is run to retrieve the row inserted by the
-     * concurrent request (TOCTOU recovery — see class Javadoc).
+     * <p>Concurrent-save race: {@link DataIntegrityViolationException} on save is caught
+     * inside {@link #persistBook}; a second {@code findByOpenLibraryKey} is run to
+     * retrieve the row inserted by the concurrent request (TOCTOU recovery).
      *
      * @param olKey the Open Library work key in short form ({@code OL45804W});
      *              the full form ({@code /works/OL45804W}) is NOT accepted here —
@@ -93,25 +94,44 @@ public class BookService {
         // Prepend /works/ to form the full canonical key used for DB storage and lookup.
         // The URL only ever delivers the short form — Spring MVC /{olKey} captures one segment.
         String fullKey = "/works/" + olKey;
-        // Short form for the getWork URI template (/works/{olKey}.json) — same as input olKey
-        String shortKey = olKey;
 
+        // Cache hit — return from DB without calling Open Library.
         return bookRepository.findByOpenLibraryKey(fullKey)
                 .map(this::toDetailDto)
                 .orElseGet(() -> {
-                    OpenLibraryWorkResponse work = openLibraryClient.getWork(shortKey);
-                    BookEntity entity = toEntity(fullKey, work);
-                    try {
-                        BookEntity saved = bookRepository.save(entity);
-                        return toDetailDto(saved);
-                    } catch (DataIntegrityViolationException e) {
-                        // Concurrent request already inserted this row — recover by re-fetching.
-                        // This must NOT propagate to GlobalExceptionHandler (wrong message for books).
-                        return bookRepository.findByOpenLibraryKey(fullKey)
-                                .map(this::toDetailDto)
-                                .orElseThrow(() -> e);
-                    }
+                    // HTTP call is intentionally OUTSIDE any transaction (I/O inside a
+                    // transaction is an anti-pattern — holds the connection during network I/O).
+                    OpenLibraryWorkResponse work = openLibraryClient.getWork(olKey);
+                    // Delegate the transactional DB write + TOCTOU recovery to a helper.
+                    return persistBook(fullKey, work);
                 });
+    }
+
+    /**
+     * Persist a fetched work to the DB inside a single transaction.
+     *
+     * <p>On unique-constraint violation (concurrent request already inserted the same key),
+     * recovers by re-fetching the row. The original {@link DataIntegrityViolationException}
+     * is NOT re-thrown — it would reach {@code GlobalExceptionHandler.handleDuplicate}
+     * and return a misleading "Email already registered" 409 response.
+     *
+     * @param fullKey the full canonical OL key (e.g. {@code /works/OL45804W})
+     * @param work    the work response from Open Library
+     * @return book detail DTO from the saved (or concurrently inserted) entity
+     */
+    @Transactional
+    BookDetailDto persistBook(String fullKey, OpenLibraryWorkResponse work) {
+        try {
+            BookEntity saved = bookRepository.save(toEntity(fullKey, work));
+            return toDetailDto(saved);
+        } catch (DataIntegrityViolationException e) {
+            // Concurrent request already inserted this row — recover by re-fetching.
+            return bookRepository.findByOpenLibraryKey(fullKey)
+                    .map(this::toDetailDto)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.INTERNAL_SERVER_ERROR,
+                            "Failed to persist book: " + fullKey));
+        }
     }
 
     // ----------------------------------------------------------------

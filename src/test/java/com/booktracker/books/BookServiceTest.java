@@ -29,8 +29,8 @@ import static org.mockito.Mockito.when;
  * {@code BookRepository} and {@code OpenLibraryClient} — no Spring context needed
  * (same pattern as {@code UserServiceTest}).
  *
- * <p>Key normalization note: {@code getOrFetch} normalizes the incoming {@code olKey}
- * to the full {@code /works/OLxxxxW} form for DB lookup and entity storage.
+ * <p>Key normalization note: {@code getOrFetch} accepts only the short form ({@code OLxxxxW})
+ * and internally prepends {@code /works/} for DB lookup and entity storage.
  * {@code OpenLibraryClient.getWork} is called with the short form ({@code OLxxxxW})
  * because the RestClient uses it as the path variable in {@code /works/{olKey}.json}.
  *
@@ -106,7 +106,7 @@ class BookServiceTest {
      * BOOK-02: Cache hit — findByOpenLibraryKey returns present → maps entity to DTO;
      * OpenLibraryClient.getWork must NOT be called.
      *
-     * <p>Input: full form {@code /works/OL45804W}. Service normalizes to full form for DB
+     * <p>Input: short form {@code OL45804W}. Service prepends {@code /works/} for DB
      * lookup; cache hit prevents any OL call.
      */
     @Test
@@ -122,7 +122,7 @@ class BookServiceTest {
         when(bookRepository.findByOpenLibraryKey("/works/OL45804W"))
                 .thenReturn(Optional.of(entity));
 
-        BookDetailDto dto = bookService.getOrFetch("/works/OL45804W");
+        BookDetailDto dto = bookService.getOrFetch("OL45804W");
 
         assertThat(dto.olKey()).isEqualTo("/works/OL45804W");
         assertThat(dto.title()).isEqualTo("Fantastic Mr Fox");
@@ -137,7 +137,7 @@ class BookServiceTest {
      * BOOK-02: Cache miss — findByOpenLibraryKey empty → getWork called (short form) →
      * save called → DTO returned.
      *
-     * <p>Input: full form {@code /works/OL45804W}. Service normalizes:
+     * <p>Input: short form {@code OL45804W}. Service normalizes:
      * <ul>
      *   <li>DB lookup: {@code findByOpenLibraryKey("/works/OL45804W")}</li>
      *   <li>OL call: {@code getWork("OL45804W")} (short form as path variable)</li>
@@ -164,7 +164,7 @@ class BookServiceTest {
         when(openLibraryClient.getWork("OL45804W")).thenReturn(work);
         when(bookRepository.save(any(BookEntity.class))).thenReturn(savedEntity);
 
-        BookDetailDto dto = bookService.getOrFetch("/works/OL45804W");
+        BookDetailDto dto = bookService.getOrFetch("OL45804W");
 
         assertThat(dto.olKey()).isEqualTo("/works/OL45804W");
         assertThat(dto.title()).isEqualTo("Fantastic Mr Fox");
@@ -186,7 +186,7 @@ class BookServiceTest {
         when(openLibraryClient.getWork("OL99999W"))
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found"));
 
-        assertThatThrownBy(() -> bookService.getOrFetch("/works/OL99999W"))
+        assertThatThrownBy(() -> bookService.getOrFetch("OL99999W"))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
                         .isEqualTo(HttpStatus.NOT_FOUND));
@@ -203,7 +203,7 @@ class BookServiceTest {
                 .thenThrow(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                         "Open Library is temporarily unavailable"));
 
-        assertThatThrownBy(() -> bookService.getOrFetch("/works/OL45804W"))
+        assertThatThrownBy(() -> bookService.getOrFetch("OL45804W"))
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
                         .isEqualTo(HttpStatus.SERVICE_UNAVAILABLE));
@@ -232,7 +232,7 @@ class BookServiceTest {
         when(bookRepository.save(any(BookEntity.class))).thenReturn(savedEntity);
 
         assertThatNoException().isThrownBy(() -> {
-            BookDetailDto dto = bookService.getOrFetch("/works/OL45804W");
+            BookDetailDto dto = bookService.getOrFetch("OL45804W");
             assertThat(dto.coverId()).isNull();
             assertThat(dto.pageCount()).isNull();
         });
@@ -263,7 +263,7 @@ class BookServiceTest {
         when(bookRepository.save(any(BookEntity.class)))
                 .thenThrow(new DataIntegrityViolationException("duplicate key"));
 
-        BookDetailDto dto = bookService.getOrFetch("/works/OL45804W");
+        BookDetailDto dto = bookService.getOrFetch("OL45804W");
 
         assertThat(dto.olKey()).isEqualTo("/works/OL45804W");
         assertThat(dto.title()).isEqualTo("Fantastic Mr Fox");
