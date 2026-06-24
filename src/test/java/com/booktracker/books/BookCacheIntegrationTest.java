@@ -90,6 +90,9 @@ class BookCacheIntegrationTest {
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.flyway.enabled",      () -> "true");
         registry.add("jwt.secret", () -> "dGVzdC1zZWNyZXQtYmFzZTY0LWVuY29kZWQtMzJieXRlcw==");
+        // WireMock overrides openlibrary.base-url to localhost — disable the SSRF host check
+        // so the context starts without rejecting the WireMock URL (WR-05 validation).
+        registry.add("openlibrary.validate-base-url", () -> "false");
     }
 
     @InjectWireMock("open-library")
