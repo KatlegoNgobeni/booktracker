@@ -121,6 +121,17 @@
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- WireMock — HTTP stub server for Open Library integration tests (Plan 02).
+             Added in Plan 01 to avoid a second pom.xml edit in a later wave.
+             wiremock-spring-boot is the official WireMock Spring Boot integration
+             (org.wiremock.integrations — verified on Maven Central). -->
+        <dependency>
+            <groupId>org.wiremock.integrations</groupId>
+            <artifactId>wiremock-spring-boot</artifactId>
+            <version>4.2.1</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
