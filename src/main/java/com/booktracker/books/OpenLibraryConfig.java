@@ -1,10 +1,10 @@
 package com.booktracker.books;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
+import org.springframework.boot.http.client.ClientHttpRequestFactorySettings;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.client.ClientHttpRequestFactoryBuilder;
-import org.springframework.http.client.ClientHttpRequestFactorySettings;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;

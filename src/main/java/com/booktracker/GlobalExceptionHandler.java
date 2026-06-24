@@ -1,5 +1,6 @@
 package com.booktracker;
 
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -52,6 +53,21 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public Map<String, String> handleBadCredentials(BadCredentialsException ex) {
         return Map.of("message", "Invalid credentials");
+    }
+
+    /**
+     * D-03: Method-parameter constraint violation → 400 Bad Request.
+     *
+     * <p>Raised when {@code @Validated} + {@code @NotBlank} (or similar) is used on
+     * a {@code @RequestParam} or path variable (e.g., blank {@code q} on
+     * GET /books/search). Spring maps this to {@code ConstraintViolationException},
+     * NOT {@code MethodArgumentNotValidException} (which only covers {@code @Valid}
+     * on request body DTOs).
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, String> handleConstraintViolation(ConstraintViolationException ex) {
+        return Map.of("message", "Validation failed");
     }
 
     /**
