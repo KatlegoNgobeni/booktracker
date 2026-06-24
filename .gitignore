@@ -1,4 +1,5 @@
 .planning/
+.claude/
 
 # Maven build output
 target/
