@@ -83,6 +83,10 @@ public class SecurityConfig {
                 // T-02-09: only these three paths are permitted unauthenticated
                 .requestMatchers("/health").permitAll()
                 .requestMatchers("/auth/register", "/auth/login").permitAll()
+                // Allow Spring Boot's /error endpoint so that ResponseStatusException
+                // (e.g. Open Library 404 → our 404) is forwarded to the error handler
+                // without Spring Security blocking the error dispatch with 401.
+                .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated()
             )
             // AUTH-04: Return 401 (not 403) when no valid JWT is present.

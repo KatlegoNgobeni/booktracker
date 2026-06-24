@@ -29,6 +29,11 @@ import static org.mockito.Mockito.when;
  * {@code BookRepository} and {@code OpenLibraryClient} — no Spring context needed
  * (same pattern as {@code UserServiceTest}).
  *
+ * <p>Key normalization note: {@code getOrFetch} normalizes the incoming {@code olKey}
+ * to the full {@code /works/OLxxxxW} form for DB lookup and entity storage.
+ * {@code OpenLibraryClient.getWork} is called with the short form ({@code OLxxxxW})
+ * because the RestClient uses it as the path variable in {@code /works/{olKey}.json}.
+ *
  * <p>BOOK-01 acceptance criteria (search path):
  * <ul>
  *   <li>search delegates q/page/size to OpenLibraryClient and returns its result unchanged</li>
@@ -100,6 +105,9 @@ class BookServiceTest {
     /**
      * BOOK-02: Cache hit — findByOpenLibraryKey returns present → maps entity to DTO;
      * OpenLibraryClient.getWork must NOT be called.
+     *
+     * <p>Input: full form {@code /works/OL45804W}. Service normalizes to full form for DB
+     * lookup; cache hit prevents any OL call.
      */
     @Test
     void getOrFetch_cacheHit_returnsEntityDtoWithoutCallingGetWork() {
@@ -126,7 +134,15 @@ class BookServiceTest {
     }
 
     /**
-     * BOOK-02: Cache miss — findByOpenLibraryKey empty → getWork called → save called → DTO returned.
+     * BOOK-02: Cache miss — findByOpenLibraryKey empty → getWork called (short form) →
+     * save called → DTO returned.
+     *
+     * <p>Input: full form {@code /works/OL45804W}. Service normalizes:
+     * <ul>
+     *   <li>DB lookup: {@code findByOpenLibraryKey("/works/OL45804W")}</li>
+     *   <li>OL call: {@code getWork("OL45804W")} (short form as path variable)</li>
+     *   <li>Entity: stored with {@code openLibraryKey = "/works/OL45804W"} (full form)</li>
+     * </ul>
      */
     @Test
     void getOrFetch_cacheMiss_fetchesFromOpenLibraryAndSaves() {
@@ -144,7 +160,8 @@ class BookServiceTest {
 
         when(bookRepository.findByOpenLibraryKey("/works/OL45804W"))
                 .thenReturn(Optional.empty());
-        when(openLibraryClient.getWork("/works/OL45804W")).thenReturn(work);
+        // getWork is called with the short form (path variable in /works/{olKey}.json)
+        when(openLibraryClient.getWork("OL45804W")).thenReturn(work);
         when(bookRepository.save(any(BookEntity.class))).thenReturn(savedEntity);
 
         BookDetailDto dto = bookService.getOrFetch("/works/OL45804W");
@@ -154,7 +171,7 @@ class BookServiceTest {
         assertThat(dto.coverId()).isEqualTo("24195");
         assertThat(dto.pageCount()).isEqualTo(96);
 
-        verify(openLibraryClient).getWork("/works/OL45804W");
+        verify(openLibraryClient).getWork("OL45804W");
         verify(bookRepository).save(any(BookEntity.class));
     }
 
@@ -165,7 +182,8 @@ class BookServiceTest {
     void getOrFetch_openLibrary404_propagatesNotFound() {
         when(bookRepository.findByOpenLibraryKey("/works/OL99999W"))
                 .thenReturn(Optional.empty());
-        when(openLibraryClient.getWork("/works/OL99999W"))
+        // getWork is called with short form "OL99999W"
+        when(openLibraryClient.getWork("OL99999W"))
                 .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Book not found"));
 
         assertThatThrownBy(() -> bookService.getOrFetch("/works/OL99999W"))
@@ -181,7 +199,7 @@ class BookServiceTest {
     void getOrFetch_openLibraryTimeout_propagatesServiceUnavailable() {
         when(bookRepository.findByOpenLibraryKey("/works/OL45804W"))
                 .thenReturn(Optional.empty());
-        when(openLibraryClient.getWork("/works/OL45804W"))
+        when(openLibraryClient.getWork("OL45804W"))
                 .thenThrow(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                         "Open Library is temporarily unavailable"));
 
@@ -210,7 +228,7 @@ class BookServiceTest {
 
         when(bookRepository.findByOpenLibraryKey("/works/OL45804W"))
                 .thenReturn(Optional.empty());
-        when(openLibraryClient.getWork("/works/OL45804W")).thenReturn(work);
+        when(openLibraryClient.getWork("OL45804W")).thenReturn(work);
         when(bookRepository.save(any(BookEntity.class))).thenReturn(savedEntity);
 
         assertThatNoException().isThrownBy(() -> {
@@ -241,7 +259,7 @@ class BookServiceTest {
         when(bookRepository.findByOpenLibraryKey("/works/OL45804W"))
                 .thenReturn(Optional.empty())                             // first check: cache miss
                 .thenReturn(Optional.of(concurrentlySavedEntity));        // recovery check: finds row
-        when(openLibraryClient.getWork("/works/OL45804W")).thenReturn(work);
+        when(openLibraryClient.getWork("OL45804W")).thenReturn(work);
         when(bookRepository.save(any(BookEntity.class)))
                 .thenThrow(new DataIntegrityViolationException("duplicate key"));
 

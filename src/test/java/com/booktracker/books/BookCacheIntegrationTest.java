@@ -22,10 +22,12 @@ import org.wiremock.spring.InjectWireMock;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
 import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.notFound;
 import static com.github.tomakehurst.wiremock.client.WireMock.okJson;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,6 +45,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>WireMock overrides {@code openlibrary.base-url} via
  * {@code baseUrlProperties = "openlibrary.base-url"} (Pitfall 6 — must match the
  * {@code @Value("${openlibrary.base-url}")} key in {@link OpenLibraryConfig} exactly).
+ *
+ * <p>Each test method uses a unique OL key to avoid cross-test DB state contamination
+ * (the Testcontainers DB is shared across all tests in the class).
  *
  * <p>Tests covered:
  * <ul>
@@ -98,16 +103,27 @@ class BookCacheIntegrationTest {
     /** JWT token obtained per-test via a fresh user registration. */
     private String authToken;
 
-    /** Unique email suffix to avoid duplicate-email conflicts between tests. */
-    private static int testCounter = 0;
+    /** Counters for unique test data per test to avoid cross-test DB contamination. */
+    private static final AtomicInteger testUserCounter = new AtomicInteger(0);
+    private static final AtomicInteger testKeyCounter = new AtomicInteger(100);
+
+    /** Per-test unique OL key suffix (short form, e.g. "OL45804W001"). */
+    private String olKeyShort;
+    /** Per-test full canonical OL key (e.g. "/works/OL45804W001"). */
+    private String olKeyFull;
 
     @BeforeEach
     void setUp() {
         // Reset WireMock request journal before each test for clean assertion state
         wireMock.resetRequests();
 
-        // Register a unique test user and capture the JWT for authenticated calls
-        String email = "booktest" + (++testCounter) + "@example.com";
+        // Assign unique OL key for this test to avoid cross-test DB state contamination
+        int keyNum = testKeyCounter.getAndIncrement();
+        olKeyShort = "OL45804W" + keyNum;
+        olKeyFull = "/works/OL45804W" + keyNum;
+
+        // Register a unique test user and capture the JWT for authenticated book calls
+        String email = "booktest" + testUserCounter.getAndIncrement() + "@example.com";
         Map<String, Object> registerBody = Map.of(
             "email",       email,
             "password",    "securepassword123",
@@ -131,21 +147,18 @@ class BookCacheIntegrationTest {
         return new HttpEntity<>(headers);
     }
 
-    /** The canonical OL key used across the cache-flow tests. */
-    private static final String OL_KEY = "/works/OL45804W";
-
-    /** Stub the OL works endpoint with a realistic work payload. */
+    /** Stub the OL works endpoint with a realistic work payload for the per-test key. */
     private void stubWorkEndpoint() {
-        wireMock.stubFor(get(urlEqualTo("/works/OL45804W.json"))
-            .willReturn(okJson("""
+        wireMock.stubFor(get(urlEqualTo("/works/" + olKeyShort + ".json"))
+            .willReturn(okJson(String.format("""
                 {
-                  "key": "/works/OL45804W",
+                  "key": "/works/%s",
                   "title": "Fantastic Mr Fox",
                   "description": "A story about a fox and his family",
                   "number_of_pages": 96,
                   "covers": [24195]
                 }
-                """)));
+                """, olKeyShort))));
     }
 
     // ----------------------------------------------------------------
@@ -162,17 +175,17 @@ class BookCacheIntegrationTest {
         stubWorkEndpoint();
 
         ResponseEntity<Map> response = restTemplate.exchange(
-            "/books/" + OL_KEY, HttpMethod.GET, authenticatedRequest(), Map.class);
+            "/books/" + olKeyShort, HttpMethod.GET, authenticatedRequest(), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         Map<?, ?> body = response.getBody();
         assertThat(body).isNotNull();
         assertThat(body.get("title")).isEqualTo("Fantastic Mr Fox");
-        assertThat(body.get("olKey")).isEqualTo(OL_KEY);
+        assertThat(body.get("olKey")).isEqualTo(olKeyFull);
         assertThat(body.get("pageCount")).isEqualTo(96);
 
-        // Verify the row was persisted to the books table
-        Optional<BookEntity> persisted = bookRepository.findByOpenLibraryKey(OL_KEY);
+        // Verify the row was persisted to the books table using the full canonical key
+        Optional<BookEntity> persisted = bookRepository.findByOpenLibraryKey(olKeyFull);
         assertThat(persisted).isPresent();
         assertThat(persisted.get().getTitle()).isEqualTo("Fantastic Mr Fox");
         assertThat(persisted.get().getPageCount()).isEqualTo(96);
@@ -193,17 +206,17 @@ class BookCacheIntegrationTest {
 
         // First call — cache miss, fetches from OL
         ResponseEntity<Map> first = restTemplate.exchange(
-            "/books/" + OL_KEY, HttpMethod.GET, authenticatedRequest(), Map.class);
+            "/books/" + olKeyShort, HttpMethod.GET, authenticatedRequest(), Map.class);
         assertThat(first.getStatusCode()).isEqualTo(HttpStatus.OK);
 
         // Second call — cache hit, should NOT call OL again
         ResponseEntity<Map> second = restTemplate.exchange(
-            "/books/" + OL_KEY, HttpMethod.GET, authenticatedRequest(), Map.class);
+            "/books/" + olKeyShort, HttpMethod.GET, authenticatedRequest(), Map.class);
         assertThat(second.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(second.getBody().get("title")).isEqualTo("Fantastic Mr Fox");
 
         // Assert WireMock received exactly ONE outbound request (D-02)
-        wireMock.verify(1, getRequestedFor(urlEqualTo("/works/OL45804W.json")));
+        wireMock.verify(1, getRequestedFor(urlEqualTo("/works/" + olKeyShort + ".json")));
     }
 
     // ----------------------------------------------------------------
@@ -219,10 +232,10 @@ class BookCacheIntegrationTest {
         stubWorkEndpoint();
 
         restTemplate.exchange(
-            "/books/" + OL_KEY, HttpMethod.GET, authenticatedRequest(), Map.class);
+            "/books/" + olKeyShort, HttpMethod.GET, authenticatedRequest(), Map.class);
 
         // Assert the recorded request carried the expected User-Agent
-        wireMock.verify(1, getRequestedFor(urlEqualTo("/works/OL45804W.json"))
+        wireMock.verify(1, getRequestedFor(urlEqualTo("/works/" + olKeyShort + ".json"))
             .withHeader("User-Agent", equalTo("BookTracker/1.0 (91katlego@gmail.com)")));
     }
 
@@ -236,11 +249,13 @@ class BookCacheIntegrationTest {
     @Test
     @SuppressWarnings("unchecked")
     void openLibrary404_returnsApiNotFound() {
-        wireMock.stubFor(get(urlEqualTo("/works/OL00000W.json"))
-            .willReturn(com.github.tomakehurst.wiremock.client.WireMock.notFound()));
+        // Stub a different key as 404 (unique to this test — no prior row in DB)
+        String notFoundKey = "OL00000W" + testKeyCounter.getAndIncrement();
+        wireMock.stubFor(get(urlEqualTo("/works/" + notFoundKey + ".json"))
+            .willReturn(notFound()));
 
         ResponseEntity<Map> response = restTemplate.exchange(
-            "/books//works/OL00000W", HttpMethod.GET, authenticatedRequest(), Map.class);
+            "/books/" + notFoundKey, HttpMethod.GET, authenticatedRequest(), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }

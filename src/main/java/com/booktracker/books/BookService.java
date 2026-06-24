@@ -62,6 +62,12 @@ public class BookService {
      * <p>Cache miss: calls {@link OpenLibraryClient#getWork}, maps the response to a
      * {@link BookEntity}, saves it, and returns a {@link BookDetailDto} mapped from the saved entity.
      *
+     * <p>Key normalization: the controller receives the raw path-segment form (e.g. {@code OL45804W}).
+     * This method normalizes to the full form (e.g. {@code /works/OL45804W}) used for DB storage and
+     * lookup, consistent with the {@code key} field returned by Open Library search results.
+     * {@link OpenLibraryClient#getWork} is called with the short form (path variable in
+     * {@code /works/{olKey}.json}).
+     *
      * <p>Error cases (propagated to the controller):
      * <ul>
      *   <li>Open Library 404 → {@code ResponseStatusException(NOT_FOUND)}</li>
@@ -72,23 +78,31 @@ public class BookService {
      * a second {@code findByOpenLibraryKey} is run to retrieve the row inserted by the
      * concurrent request (TOCTOU recovery — see class Javadoc).
      *
-     * @param olKey the Open Library work key (e.g. {@code /works/OL45804W})
+     * @param olKey the Open Library work key — either short form ({@code OL45804W}) or
+     *              full form ({@code /works/OL45804W}); normalized internally
      * @return book detail DTO
      * @throws org.springframework.web.server.ResponseStatusException on 404 or timeout
      */
     public BookDetailDto getOrFetch(String olKey) {
-        return bookRepository.findByOpenLibraryKey(olKey)
+        // Normalize to full canonical form (/works/OL45804W) for DB lookup and entity storage.
+        // The Open Library search response returns the full /works/OLxxxxW key; the URL path
+        // segment may be either the short or full form.
+        String fullKey = olKey.startsWith("/works/") ? olKey : "/works/" + olKey;
+        // Short form for the getWork URI template (/works/{olKey}.json)
+        String shortKey = fullKey.startsWith("/works/") ? fullKey.substring("/works/".length()) : fullKey;
+
+        return bookRepository.findByOpenLibraryKey(fullKey)
                 .map(this::toDetailDto)
                 .orElseGet(() -> {
-                    OpenLibraryWorkResponse work = openLibraryClient.getWork(olKey);
-                    BookEntity entity = toEntity(olKey, work);
+                    OpenLibraryWorkResponse work = openLibraryClient.getWork(shortKey);
+                    BookEntity entity = toEntity(fullKey, work);
                     try {
                         BookEntity saved = bookRepository.save(entity);
                         return toDetailDto(saved);
                     } catch (DataIntegrityViolationException e) {
                         // Concurrent request already inserted this row — recover by re-fetching.
                         // This must NOT propagate to GlobalExceptionHandler (wrong message for books).
-                        return bookRepository.findByOpenLibraryKey(olKey)
+                        return bookRepository.findByOpenLibraryKey(fullKey)
                                 .map(this::toDetailDto)
                                 .orElseThrow(() -> e);
                     }
