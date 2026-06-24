@@ -34,6 +34,9 @@ public class OpenLibraryConfig {
     @Value("${openlibrary.read-timeout:PT10S}")
     private Duration readTimeout;
 
+    @Value("${openlibrary.user-agent:BookTracker/1.0 (contact@example.com)}")
+    private String userAgent;
+
     /**
      * RestClient bean for Open Library API calls.
      *
@@ -55,7 +58,7 @@ public class OpenLibraryConfig {
 
         return builder
                 .baseUrl(baseUrl)
-                .defaultHeader("User-Agent", "BookTracker/1.0 (91katlego@gmail.com)")
+                .defaultHeader("User-Agent", userAgent)
                 .requestFactory(requestFactory)
                 .build();
     }

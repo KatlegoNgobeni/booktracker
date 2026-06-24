@@ -4,6 +4,7 @@ import com.github.tomakehurst.wiremock.WireMockServer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
@@ -96,6 +97,9 @@ class BookCacheIntegrationTest {
 
     @Autowired
     private TestRestTemplate restTemplate;
+
+    @Value("${openlibrary.user-agent:BookTracker/1.0 (contact@example.com)}")
+    private String expectedUserAgent;
 
     @Autowired
     private BookRepository bookRepository;
@@ -225,7 +229,7 @@ class BookCacheIntegrationTest {
 
     /**
      * BOOK-03: The outbound work request to Open Library must carry the configured
-     * User-Agent header "BookTracker/1.0 (91katlego@gmail.com)".
+     * User-Agent header from {@code openlibrary.user-agent}.
      */
     @Test
     void userAgent_headerPresentOnOutboundCall() {
@@ -234,9 +238,10 @@ class BookCacheIntegrationTest {
         restTemplate.exchange(
             "/books/" + olKeyShort, HttpMethod.GET, authenticatedRequest(), Map.class);
 
-        // Assert the recorded request carried the expected User-Agent
+        // Assert the recorded request carried the expected User-Agent (read from config,
+        // not hardcoded — CR-03 fix: email is now externalized to application.properties)
         wireMock.verify(1, getRequestedFor(urlEqualTo("/works/" + olKeyShort + ".json"))
-            .withHeader("User-Agent", equalTo("BookTracker/1.0 (91katlego@gmail.com)")));
+            .withHeader("User-Agent", equalTo(expectedUserAgent)));
     }
 
     // ----------------------------------------------------------------
