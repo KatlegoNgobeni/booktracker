@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 /**
@@ -139,6 +140,78 @@ public class ShelfService {
     }
 
     /**
+     * Update metadata on an owned shelf entry (SHELF-03).
+     *
+     * <p>Applies auto-date rules (D-10/D-11/D-12) via {@link #applyAutoDateRules} BEFORE
+     * setting the new status, so the helper can read the old status.
+     *
+     * <p>Null on any request field means preserve-existing (MVP null-semantics, RESEARCH.md
+     * Pattern 8 / Open Question 1).
+     *
+     * @param id   the shelf entry UUID
+     * @param req  partial metadata update — any field may be null (preserve-existing)
+     * @param user the authenticated user (ownership enforced via getEntryForUser)
+     * @return updated DTO
+     * @throws ResponseStatusException 404 if entry not found, 403 if wrong owner
+     */
+    @Transactional
+    public ShelfEntryDto updateMetadata(UUID id, UpdateShelfRequest req, UserEntity user) {
+        UserBookEntity entry = getEntryForUser(id, user);
+
+        if (req.getStatus() != null) {
+            // D-13: auto-date logic lives here, reads old status BEFORE updating.
+            applyAutoDateRules(entry, req.getStatus());
+            entry.setShelfStatus(req.getStatus());
+        }
+        if (req.getRating() != null) {
+            entry.setRating(req.getRating());
+        }
+        if (req.getReview() != null) {
+            entry.setReview(req.getReview());
+        }
+        // Explicit dateStarted/dateFinished from the request wins over auto-date rule.
+        if (req.getDateStarted() != null) {
+            entry.setDateStarted(req.getDateStarted());
+        }
+        if (req.getDateFinished() != null) {
+            entry.setDateFinished(req.getDateFinished());
+        }
+
+        shelfRepository.save(entry);
+        return toDto(entry);
+    }
+
+    /**
+     * Update reading progress on an owned shelf entry (SHELF-04).
+     *
+     * @param id   the shelf entry UUID
+     * @param req  progress update with {@code @NotNull @Min(0) currentPage}
+     * @param user the authenticated user
+     * @return updated DTO
+     * @throws ResponseStatusException 404 if entry not found, 403 if wrong owner
+     */
+    @Transactional
+    public ShelfEntryDto updateProgress(UUID id, UpdateProgressRequest req, UserEntity user) {
+        UserBookEntity entry = getEntryForUser(id, user);
+        entry.setCurrentPage(req.getCurrentPage());
+        shelfRepository.save(entry);
+        return toDto(entry);
+    }
+
+    /**
+     * Remove an owned shelf entry (SHELF-05).
+     *
+     * @param id   the shelf entry UUID
+     * @param user the authenticated user
+     * @throws ResponseStatusException 404 if entry not found, 403 if wrong owner
+     */
+    @Transactional
+    public void removeEntry(UUID id, UserEntity user) {
+        UserBookEntity entry = getEntryForUser(id, user);
+        shelfRepository.delete(entry);
+    }
+
+    /**
      * Two-step ownership check — required to distinguish 404 from 403 (SHELF-06 + T-04-01).
      *
      * <p>Step 1: {@code findById} → throws 404 if absent.
@@ -159,6 +232,42 @@ public class ShelfService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
         return entry;
+    }
+
+    /**
+     * Apply auto-date rules before a status change (D-10, D-11, D-12 — D-13: service only).
+     *
+     * <p>Must be called BEFORE {@code entry.setShelfStatus(newStatus)} so that the old
+     * status can be read via {@code entry.getShelfStatus()}.
+     *
+     * <ul>
+     *   <li>D-10: {@code newStatus == READ} and {@code dateFinished == null} → set to today</li>
+     *   <li>D-11: {@code newStatus == CURRENTLY_READING} and {@code dateStarted == null} → set to today</li>
+     *   <li>D-12: {@code oldStatus == READ} and {@code newStatus != READ} → clear dateFinished</li>
+     * </ul>
+     *
+     * @param entry     the shelf entry in its current (pre-update) state
+     * @param newStatus the status the entry is being changed to
+     */
+    private void applyAutoDateRules(UserBookEntity entry, ShelfStatus newStatus) {
+        ShelfStatus oldStatus = entry.getShelfStatus();
+
+        if (newStatus == ShelfStatus.READ) {
+            // D-10: auto-set dateFinished only if not already set
+            if (entry.getDateFinished() == null) {
+                entry.setDateFinished(LocalDate.now());
+            }
+        } else if (newStatus == ShelfStatus.CURRENTLY_READING) {
+            // D-11: auto-set dateStarted only if not already set
+            if (entry.getDateStarted() == null) {
+                entry.setDateStarted(LocalDate.now());
+            }
+        }
+
+        // D-12: downgrade from READ to any other status — clear stale dateFinished
+        if (oldStatus == ShelfStatus.READ && newStatus != ShelfStatus.READ) {
+            entry.setDateFinished(null);
+        }
     }
 
     /**

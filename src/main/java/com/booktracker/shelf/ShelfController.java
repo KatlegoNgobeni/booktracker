@@ -7,12 +7,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -94,5 +97,62 @@ public class ShelfController {
             @PathVariable UUID id,
             @AuthenticationPrincipal UserEntity user) {
         return shelfService.getEntry(id, user);
+    }
+
+    /**
+     * PATCH /shelf/{id} — update metadata (status/rating/review/dates) on own entry.
+     *
+     * <p>Returns 200 + updated {@link ShelfEntryDto} on success (D-05).
+     * Auto-date rules D-10/D-11/D-12 are applied by {@link ShelfService#updateMetadata}.
+     * Returns 403 if entry belongs to another user; 404 if not found (SHELF-06, T-04-06).
+     *
+     * @param id   the shelf entry UUID
+     * @param req  partial update — any field may be null (preserve-existing)
+     * @param user the authenticated user
+     * @return 200 + updated shelf entry DTO
+     */
+    @PatchMapping("/{id}")
+    public ShelfEntryDto updateMetadata(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateShelfRequest req,
+            @AuthenticationPrincipal UserEntity user) {
+        return shelfService.updateMetadata(id, req, user);
+    }
+
+    /**
+     * PATCH /shelf/{id}/progress — update reading progress (current page) on own entry.
+     *
+     * <p>Returns 200 + updated {@link ShelfEntryDto} on success (D-05).
+     * Returns 400 if {@code currentPage < 0} (@Min(0) on UpdateProgressRequest, T-04-07).
+     * Returns 403 if wrong owner; 404 if not found (SHELF-06, T-04-06).
+     *
+     * @param id   the shelf entry UUID
+     * @param req  progress update with validated currentPage (@NotNull @Min(0))
+     * @param user the authenticated user
+     * @return 200 + updated shelf entry DTO
+     */
+    @PatchMapping("/{id}/progress")
+    public ShelfEntryDto updateProgress(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateProgressRequest req,
+            @AuthenticationPrincipal UserEntity user) {
+        return shelfService.updateProgress(id, req, user);
+    }
+
+    /**
+     * DELETE /shelf/{id} — remove own shelf entry.
+     *
+     * <p>Returns 204 No Content on success (D-06).
+     * Returns 403 if entry belongs to another user; 404 if not found (SHELF-06, T-04-06).
+     *
+     * @param id   the shelf entry UUID
+     * @param user the authenticated user
+     */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeEntry(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserEntity user) {
+        shelfService.removeEntry(id, user);
     }
 }
