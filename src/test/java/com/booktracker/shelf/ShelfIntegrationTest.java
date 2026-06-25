@@ -346,4 +346,222 @@ class ShelfIntegrationTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
+
+    // ----------------------------------------------------------------
+    // SHELF-03: Update metadata (PATCH /shelf/{id})
+    // ----------------------------------------------------------------
+
+    /**
+     * SHELF-03 + D-04 + D-05 + D-10: PATCH /shelf/{id} with {status:READ, rating:5, review:"great"}
+     * returns 200 + body with rating==5 and dateFinished present (auto-set by D-10).
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void updateMetadataReturns200() {
+        String olKey = seedBook("H");
+        // Add to shelf
+        ResponseEntity<Map> addResponse = restTemplate.exchange(
+            "/shelf", HttpMethod.POST,
+            new HttpEntity<>(Map.of("olKey", olKey, "status", "WANT_TO_READ"), bearerHeaders()),
+            Map.class);
+        assertThat(addResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String entryId = addResponse.getBody().get("entryId").toString();
+
+        // PATCH metadata: set status=READ, rating=5, review="great"
+        Map<String, Object> patchBody = Map.of(
+            "status", "READ",
+            "rating", 5,
+            "review", "great"
+        );
+        ResponseEntity<Map> patchResponse = restTemplate.exchange(
+            "/shelf/" + entryId, HttpMethod.PATCH,
+            new HttpEntity<>(patchBody, bearerHeaders()),
+            Map.class);
+
+        assertThat(patchResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Map<?, ?> body = patchResponse.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.get("rating")).isEqualTo(5);
+        assertThat(body.get("review")).isEqualTo("great");
+        assertThat(body.get("status")).isEqualTo("READ");
+        // D-10: dateFinished should be auto-set to today
+        assertThat(body.get("dateFinished")).isNotNull();
+    }
+
+    // ----------------------------------------------------------------
+    // SHELF-04: Update progress (PATCH /shelf/{id}/progress)
+    // ----------------------------------------------------------------
+
+    /**
+     * SHELF-04 + D-04 + D-05: PATCH /shelf/{id}/progress with {currentPage:42}
+     * returns 200 + body with currentPage==42.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void updateProgressReturns200() {
+        String olKey = seedBook("I");
+        ResponseEntity<Map> addResponse = restTemplate.exchange(
+            "/shelf", HttpMethod.POST,
+            new HttpEntity<>(Map.of("olKey", olKey, "status", "CURRENTLY_READING"), bearerHeaders()),
+            Map.class);
+        assertThat(addResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String entryId = addResponse.getBody().get("entryId").toString();
+
+        // PATCH progress
+        Map<String, Object> progressBody = Map.of("currentPage", 42);
+        ResponseEntity<Map> patchResponse = restTemplate.exchange(
+            "/shelf/" + entryId + "/progress", HttpMethod.PATCH,
+            new HttpEntity<>(progressBody, bearerHeaders()),
+            Map.class);
+
+        assertThat(patchResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Map<?, ?> body = patchResponse.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.get("currentPage")).isEqualTo(42);
+    }
+
+    /**
+     * T-04-07: PATCH /shelf/{id}/progress with {currentPage:-1} returns 400 Bad Request
+     * (validated by @Min(0) on UpdateProgressRequest.currentPage).
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void updateProgressNegativeReturns400() {
+        String olKey = seedBook("J");
+        ResponseEntity<Map> addResponse = restTemplate.exchange(
+            "/shelf", HttpMethod.POST,
+            new HttpEntity<>(Map.of("olKey", olKey, "status", "CURRENTLY_READING"), bearerHeaders()),
+            Map.class);
+        assertThat(addResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String entryId = addResponse.getBody().get("entryId").toString();
+
+        // PATCH progress with invalid negative value
+        Map<String, Object> progressBody = Map.of("currentPage", -1);
+        ResponseEntity<Map> patchResponse = restTemplate.exchange(
+            "/shelf/" + entryId + "/progress", HttpMethod.PATCH,
+            new HttpEntity<>(progressBody, bearerHeaders()),
+            Map.class);
+
+        assertThat(patchResponse.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    // ----------------------------------------------------------------
+    // SHELF-05: Remove entry (DELETE /shelf/{id})
+    // ----------------------------------------------------------------
+
+    /**
+     * SHELF-05 + D-06: DELETE /shelf/{id} removes the entry and returns 204.
+     * Subsequent GET /shelf/{id} returns 404 confirming the entry is gone.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void removeEntryReturns204() {
+        String olKey = seedBook("K");
+        ResponseEntity<Map> addResponse = restTemplate.exchange(
+            "/shelf", HttpMethod.POST,
+            new HttpEntity<>(Map.of("olKey", olKey, "status", "WANT_TO_READ"), bearerHeaders()),
+            Map.class);
+        assertThat(addResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String entryId = addResponse.getBody().get("entryId").toString();
+
+        // DELETE the entry
+        ResponseEntity<Void> deleteResponse = restTemplate.exchange(
+            "/shelf/" + entryId, HttpMethod.DELETE,
+            new HttpEntity<>(bearerHeaders()),
+            Void.class);
+
+        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        // Confirm it is gone — subsequent GET should return 404
+        ResponseEntity<Map> getResponse = restTemplate.exchange(
+            "/shelf/" + entryId, HttpMethod.GET,
+            new HttpEntity<>(bearerHeaders()),
+            Map.class);
+        assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    // ----------------------------------------------------------------
+    // SHELF-06 (write paths): Ownership enforcement on PATCH and DELETE
+    // ----------------------------------------------------------------
+
+    /**
+     * T-04-06 IDOR: User A adds entry → User B PATCH /shelf/{id} → 403 Forbidden.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void patchOwnershipReturns403() {
+        // User A adds entry
+        String olKey = seedBook("L");
+        ResponseEntity<Map> addResponse = restTemplate.exchange(
+            "/shelf", HttpMethod.POST,
+            new HttpEntity<>(Map.of("olKey", olKey, "status", "WANT_TO_READ"), bearerHeaders()),
+            Map.class);
+        assertThat(addResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String entryId = addResponse.getBody().get("entryId").toString();
+
+        // Register User B
+        String tokenB = registerNewUser();
+
+        // User B tries to PATCH User A's entry → 403
+        HttpHeaders headersB = new HttpHeaders();
+        headersB.setBearerAuth(tokenB);
+        Map<String, Object> patchBody = Map.of("status", "READ");
+        ResponseEntity<Map> patchResponse = restTemplate.exchange(
+            "/shelf/" + entryId, HttpMethod.PATCH,
+            new HttpEntity<>(patchBody, headersB),
+            Map.class);
+
+        assertThat(patchResponse.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    /**
+     * T-04-06 IDOR: User A adds entry → User B DELETE /shelf/{id} → 403 Forbidden.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void deleteOwnershipReturns403() {
+        // User A adds entry
+        String olKey = seedBook("M");
+        ResponseEntity<Map> addResponse = restTemplate.exchange(
+            "/shelf", HttpMethod.POST,
+            new HttpEntity<>(Map.of("olKey", olKey, "status", "WANT_TO_READ"), bearerHeaders()),
+            Map.class);
+        assertThat(addResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String entryId = addResponse.getBody().get("entryId").toString();
+
+        // Register User B
+        String tokenB = registerNewUser();
+
+        // User B tries to DELETE User A's entry → 403
+        HttpHeaders headersB = new HttpHeaders();
+        headersB.setBearerAuth(tokenB);
+        ResponseEntity<Map> deleteResponse = restTemplate.exchange(
+            "/shelf/" + entryId, HttpMethod.DELETE,
+            new HttpEntity<>(headersB),
+            Map.class);
+
+        assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    // ----------------------------------------------------------------
+    // Private helpers
+    // ----------------------------------------------------------------
+
+    /**
+     * Register a fresh user and return their JWT token.
+     * Uses the shared testUserCounter to ensure unique emails across tests.
+     */
+    @SuppressWarnings("unchecked")
+    private String registerNewUser() {
+        String email = "shelftest_b" + testUserCounter.getAndIncrement() + "@example.com";
+        Map<String, Object> registerBody = Map.of(
+            "email",       email,
+            "password",    "securepassword123",
+            "displayName", "ShelfTesterB"
+        );
+        Map<String, Object> response = restTemplate
+                .postForEntity("/auth/register", registerBody, Map.class)
+                .getBody();
+        return response.get("token").toString();
+    }
 }
