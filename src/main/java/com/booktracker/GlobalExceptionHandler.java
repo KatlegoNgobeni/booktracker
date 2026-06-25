@@ -3,12 +3,14 @@ package com.booktracker;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -36,11 +38,36 @@ public class GlobalExceptionHandler {
      * {@code DataIntegrityViolationException} when the {@code users_email_uq} constraint fires.
      * The generic message is intentional — it does not reveal which field triggered the
      * constraint (T-02-03 mitigation).
+     *
+     * <p>Note: {@link org.springframework.web.server.ResponseStatusException} thrown from
+     * service layer (e.g. "Book already on shelf" 409) is handled by
+     * {@link #handleResponseStatus(ResponseStatusException)} before reaching this handler,
+     * because {@code @ExceptionHandler} resolution selects the most specific handler first.
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public Map<String, String> handleDuplicate(DataIntegrityViolationException ex) {
         return Map.of("message", "Email already registered");
+    }
+
+    /**
+     * Maps {@link ResponseStatusException} (thrown from service layer) to a consistent
+     * {@code {"message": "..."}} response body with the correct HTTP status.
+     *
+     * <p>Spring Boot 3 does NOT include the exception reason in the default error body
+     * unless {@code server.error.include-message=always} is set (security default).
+     * Rather than enabling that globally, we handle {@code ResponseStatusException} here
+     * to maintain the project's {@code {"message": "..."}} error shape for all service-level
+     * exceptions (e.g., 409 "Book already on shelf", 404 "Shelf entry not found",
+     * 403 "Access denied", 404/503 from BookService).
+     *
+     * <p>This handler fires for shelf, book, and any future service-layer errors that throw
+     * {@code ResponseStatusException}.
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Map<String, String>> handleResponseStatus(ResponseStatusException ex) {
+        return ResponseEntity.status(ex.getStatusCode())
+                .body(Map.of("message", ex.getReason() != null ? ex.getReason() : ex.getMessage()));
     }
 
     /**
