@@ -71,15 +71,15 @@ class BookServiceTest {
      */
     @Test
     void search_delegatesToClientAndReturnsList() {
-        var dto1 = new BookSearchResultDto("/works/OL123W", "Dune", List.of("Frank Herbert"), "123", 1965);
-        var dto2 = new BookSearchResultDto("/works/OL456W", "Dune Messiah", List.of("Frank Herbert"), "456", 1969);
+        var dto1 = new BookSearchResultDto("OL123W", "Dune", List.of("Frank Herbert"), "123", 1965);
+        var dto2 = new BookSearchResultDto("OL456W", "Dune Messiah", List.of("Frank Herbert"), "456", 1969);
         when(openLibraryClient.search("dune", 0, 10)).thenReturn(List.of(dto1, dto2));
 
         List<BookSearchResultDto> result = bookService.search("dune", 0, 10);
 
         assertThat(result).hasSize(2);
-        assertThat(result.get(0).olKey()).isEqualTo("/works/OL123W");
-        assertThat(result.get(1).olKey()).isEqualTo("/works/OL456W");
+        assertThat(result.get(0).olKey()).isEqualTo("OL123W");
+        assertThat(result.get(1).olKey()).isEqualTo("OL456W");
     }
 
     /**
@@ -87,7 +87,7 @@ class BookServiceTest {
      */
     @Test
     void search_rowWithNullCoverAndNullAuthors_doesNotThrow() {
-        var dto = new BookSearchResultDto("/works/OL789W", "Unknown Book", null, null, null);
+        var dto = new BookSearchResultDto("OL789W", "Unknown Book", null, null, null);
         when(openLibraryClient.search("unknown", 0, 10)).thenReturn(List.of(dto));
 
         assertThatNoException().isThrownBy(() -> {
@@ -124,7 +124,7 @@ class BookServiceTest {
 
         BookDetailDto dto = bookService.getOrFetch("OL45804W");
 
-        assertThat(dto.olKey()).isEqualTo("/works/OL45804W");
+        assertThat(dto.olKey()).isEqualTo("OL45804W");
         assertThat(dto.title()).isEqualTo("Fantastic Mr Fox");
         assertThat(dto.coverId()).isEqualTo("24195");
         assertThat(dto.pageCount()).isEqualTo(96);
@@ -166,7 +166,7 @@ class BookServiceTest {
 
         BookDetailDto dto = bookService.getOrFetch("OL45804W");
 
-        assertThat(dto.olKey()).isEqualTo("/works/OL45804W");
+        assertThat(dto.olKey()).isEqualTo("OL45804W");
         assertThat(dto.title()).isEqualTo("Fantastic Mr Fox");
         assertThat(dto.coverId()).isEqualTo("24195");
         assertThat(dto.pageCount()).isEqualTo(96);
@@ -265,7 +265,7 @@ class BookServiceTest {
 
         BookDetailDto dto = bookService.getOrFetch("OL45804W");
 
-        assertThat(dto.olKey()).isEqualTo("/works/OL45804W");
+        assertThat(dto.olKey()).isEqualTo("OL45804W");
         assertThat(dto.title()).isEqualTo("Fantastic Mr Fox");
     }
 }

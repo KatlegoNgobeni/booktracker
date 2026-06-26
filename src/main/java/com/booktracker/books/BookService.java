@@ -143,7 +143,7 @@ public class BookService {
      */
     private BookDetailDto toDetailDto(BookEntity entity) {
         return new BookDetailDto(
-                entity.getOpenLibraryKey(),
+                entity.getOpenLibraryKey().replaceFirst("^/works/", ""),
                 entity.getTitle(),
                 entity.getAuthors(),
                 entity.getCoverId(),

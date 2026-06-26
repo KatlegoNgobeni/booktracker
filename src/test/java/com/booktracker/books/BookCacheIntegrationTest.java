@@ -188,7 +188,7 @@ class BookCacheIntegrationTest {
         Map<?, ?> body = response.getBody();
         assertThat(body).isNotNull();
         assertThat(body.get("title")).isEqualTo("Fantastic Mr Fox");
-        assertThat(body.get("olKey")).isEqualTo(olKeyFull);
+        assertThat(body.get("olKey")).isEqualTo(olKeyShort);
         assertThat(body.get("pageCount")).isEqualTo(96);
 
         // Verify the row was persisted to the books table using the full canonical key

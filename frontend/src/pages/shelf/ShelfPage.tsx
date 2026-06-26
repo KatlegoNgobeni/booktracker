@@ -154,7 +154,7 @@ function ShelfTabPanel({ status }: { status: ShelfStatus }) {
         <ShelfEntryCard
           key={entry.entryId}
           entry={entry}
-          onClick={() => navigate(`/shelf/${entry.entryId}`)}
+          onClick={() => navigate(`/shelf/${entry.entryId}/edit`)}
         />
       ))}
 

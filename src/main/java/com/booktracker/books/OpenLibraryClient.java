@@ -83,7 +83,7 @@ public class OpenLibraryClient {
 
         return response.getDocs().stream()
                 .map(doc -> new BookSearchResultDto(
-                        doc.getKey(),
+                        doc.getKey().replaceFirst("^/works/", ""),
                         doc.getTitle(),
                         doc.getAuthorName(),
                         doc.getCoverI() != null ? String.valueOf(doc.getCoverI()) : null,

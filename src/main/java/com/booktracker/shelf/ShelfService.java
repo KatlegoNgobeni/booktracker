@@ -135,6 +135,7 @@ public class ShelfService {
      * @throws ResponseStatusException 404 if the entry does not exist
      * @throws ResponseStatusException 403 if the entry belongs to another user (T-04-01 IDOR)
      */
+    @Transactional(readOnly = true)
     public ShelfEntryDto getEntry(UUID id, UserEntity user) {
         return toDto(getEntryForUser(id, user));
     }
@@ -290,7 +291,7 @@ public class ShelfService {
                 entry.getDateFinished(),
                 entry.getCreatedAt(),
                 book.getTitle(),
-                book.getOpenLibraryKey(),
+                book.getOpenLibraryKey().replaceFirst("^/works/", ""),
                 book.getCoverId(),
                 book.getAuthors()
         );

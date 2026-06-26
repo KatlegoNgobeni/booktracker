@@ -176,7 +176,7 @@ class ShelfServiceTest {
 
         shelfService.updateMetadata(entryId, req, user);
 
-        assertThat(entry.getRating()).isEqualTo(4);
+        assertThat(entry.getRating()).isEqualTo((short) 4);
     }
 
     // ----------------------------------------------------------------

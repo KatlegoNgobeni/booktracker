@@ -69,12 +69,12 @@ class BookControllerTest {
      */
     @Test
     void search_validQuery_returns200WithExpectedShape() throws Exception {
-        var dto = new BookSearchResultDto("/works/OL123W", "Dune", List.of("Frank Herbert"), "123", 1965);
+        var dto = new BookSearchResultDto("OL123W", "Dune", List.of("Frank Herbert"), "123", 1965);
         when(bookService.search("dune", 0, 10)).thenReturn(List.of(dto));
 
         mockMvc.perform(get("/books/search").param("q", "dune"))
                .andExpect(status().isOk())
-               .andExpect(jsonPath("$[0].olKey").value("/works/OL123W"))
+               .andExpect(jsonPath("$[0].olKey").value("OL123W"))
                .andExpect(jsonPath("$[0].title").value("Dune"))
                .andExpect(jsonPath("$[0].coverId").value("123"))
                .andExpect(jsonPath("$[0].firstPublishYear").value(1965))
