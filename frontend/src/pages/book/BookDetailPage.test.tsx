@@ -113,9 +113,9 @@ describe('BookDetailPage', () => {
     // Add buttons must NOT be present
     expect(screen.queryByRole('button', { name: /want to read/i })).not.toBeInTheDocument();
 
-    // Badge and "View on Shelf" link must be present
-    expect(screen.getByText(/on shelf/i)).toBeInTheDocument();
-    expect(screen.getByText(/want to read/i)).toBeInTheDocument();
+    // Badge shows full status label — use exact string to avoid matching ancestor containers
+    expect(screen.getByText('On shelf: Want to Read')).toBeInTheDocument();
+    // "View on Shelf" link must be present
     expect(screen.getByRole('link', { name: /view on shelf/i })).toBeInTheDocument();
   });
 
