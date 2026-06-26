@@ -63,6 +63,7 @@ export interface ShelfEntry {
   rating: number | null;
   review: string | null;
   currentPage: number | null;
+  pageCount?: number | null;    // Optional book page count — show progress bar only when present and > 0 (D-10)
   dateStarted: string | null;   // ISO LocalDate (YYYY-MM-DD)
   dateFinished: string | null;  // ISO LocalDate (YYYY-MM-DD)
   createdAt: string;            // ISO OffsetDateTime
