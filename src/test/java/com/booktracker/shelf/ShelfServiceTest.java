@@ -166,7 +166,7 @@ class ShelfServiceTest {
     @Test
     void updateMetadata_nullRatingPreservesExisting() {
         UserBookEntity entry = buildEntry(ShelfStatus.WANT_TO_READ);
-        entry.setRating(4);
+        entry.setRating((short) 4);
 
         when(shelfRepository.findById(entryId)).thenReturn(Optional.of(entry));
         when(shelfRepository.save(any(UserBookEntity.class))).thenAnswer(inv -> inv.getArgument(0));
