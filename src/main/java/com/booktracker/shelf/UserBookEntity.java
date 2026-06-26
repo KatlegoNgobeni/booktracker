@@ -81,8 +81,8 @@ public class UserBookEntity {
      * Stored as smallint per schema; {@code @Column(columnDefinition = "smallint")} is explicit
      * to match the schema type (Assumption A2 in RESEARCH.md).
      */
-    @Column(columnDefinition = "smallint")
-    private Integer rating;
+    @Column(name = "rating")
+    private Short rating;
 
     /** Free-text review. Nullable. */
     @Column(columnDefinition = "text")
@@ -156,11 +156,11 @@ public class UserBookEntity {
         this.shelfStatus = shelfStatus;
     }
 
-    public Integer getRating() {
+    public Short getRating() {
         return rating;
     }
 
-    public void setRating(Integer rating) {
+    public void setRating(Short rating) {
         this.rating = rating;
     }
 

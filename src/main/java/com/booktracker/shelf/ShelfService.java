@@ -164,7 +164,7 @@ public class ShelfService {
             entry.setShelfStatus(req.getStatus());
         }
         if (req.getRating() != null) {
-            entry.setRating(req.getRating());
+            entry.setRating(req.getRating().shortValue());
         }
         if (req.getReview() != null) {
             entry.setReview(req.getReview());
@@ -283,7 +283,7 @@ public class ShelfService {
         return new ShelfEntryDto(
                 entry.getId().toString(),
                 entry.getShelfStatus(),
-                entry.getRating(),
+                entry.getRating() != null ? entry.getRating().intValue() : null,
                 entry.getReview(),
                 entry.getCurrentPage(),
                 entry.getDateStarted(),
