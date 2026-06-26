@@ -14,8 +14,8 @@ import { ShelfPage } from './pages/ShelfPage';
 import { SearchPage } from './pages/search/SearchPage';
 import { ShelfEntryEditorPage } from './pages/ShelfEntryEditorPage';
 import { BookDetailPage } from './pages/book/BookDetailPage';
-import { StatsPage } from './pages/StatsPage';
-import { ProfilePage } from './pages/ProfilePage';
+import { StatsPage } from './pages/stats/StatsPage';
+import { ProfilePage } from './pages/profile/ProfilePage';
 
 export default function App() {
   return (
