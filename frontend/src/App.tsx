@@ -11,9 +11,9 @@ import { AppLayout } from './components/layout/AppLayout';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { ShelfPage } from './pages/ShelfPage';
-import { SearchPage } from './pages/SearchPage';
+import { SearchPage } from './pages/search/SearchPage';
 import { ShelfEntryEditorPage } from './pages/ShelfEntryEditorPage';
-import { BookDetailPage } from './pages/BookDetailPage';
+import { BookDetailPage } from './pages/book/BookDetailPage';
 import { StatsPage } from './pages/StatsPage';
 import { ProfilePage } from './pages/ProfilePage';
 
