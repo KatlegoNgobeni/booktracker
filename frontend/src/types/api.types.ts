@@ -50,6 +50,7 @@ export interface BookDetail {
   coverId: string | null;
   pageCount: number | null;
   firstPublishYear: number | null;
+  description: string | null; // Open Library work description — may be absent (null)
 }
 
 // Derived from ShelfStatus.java (enum STRING values — @Enumerated(EnumType.STRING))
