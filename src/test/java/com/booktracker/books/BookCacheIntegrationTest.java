@@ -138,7 +138,7 @@ class BookCacheIntegrationTest {
         );
         @SuppressWarnings("unchecked")
         ResponseEntity<Map> registerResponse = restTemplate.postForEntity(
-            "/auth/register", registerBody, Map.class);
+            "/api/auth/register", registerBody, Map.class);
         assertThat(registerResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         authToken = registerResponse.getBody().get("token").toString();
     }
@@ -182,7 +182,7 @@ class BookCacheIntegrationTest {
         stubWorkEndpoint();
 
         ResponseEntity<Map> response = restTemplate.exchange(
-            "/books/" + olKeyShort, HttpMethod.GET, authenticatedRequest(), Map.class);
+            "/api/books/" + olKeyShort, HttpMethod.GET, authenticatedRequest(), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         Map<?, ?> body = response.getBody();
@@ -213,12 +213,12 @@ class BookCacheIntegrationTest {
 
         // First call — cache miss, fetches from OL
         ResponseEntity<Map> first = restTemplate.exchange(
-            "/books/" + olKeyShort, HttpMethod.GET, authenticatedRequest(), Map.class);
+            "/api/books/" + olKeyShort, HttpMethod.GET, authenticatedRequest(), Map.class);
         assertThat(first.getStatusCode()).isEqualTo(HttpStatus.OK);
 
         // Second call — cache hit, should NOT call OL again
         ResponseEntity<Map> second = restTemplate.exchange(
-            "/books/" + olKeyShort, HttpMethod.GET, authenticatedRequest(), Map.class);
+            "/api/books/" + olKeyShort, HttpMethod.GET, authenticatedRequest(), Map.class);
         assertThat(second.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(second.getBody().get("title")).isEqualTo("Fantastic Mr Fox");
 
@@ -239,7 +239,7 @@ class BookCacheIntegrationTest {
         stubWorkEndpoint();
 
         restTemplate.exchange(
-            "/books/" + olKeyShort, HttpMethod.GET, authenticatedRequest(), Map.class);
+            "/api/books/" + olKeyShort, HttpMethod.GET, authenticatedRequest(), Map.class);
 
         // Assert the recorded request carried the expected User-Agent (read from config,
         // not hardcoded — CR-03 fix: email is now externalized to application.properties)
@@ -263,7 +263,7 @@ class BookCacheIntegrationTest {
             .willReturn(notFound()));
 
         ResponseEntity<Map> response = restTemplate.exchange(
-            "/books/" + notFoundKey, HttpMethod.GET, authenticatedRequest(), Map.class);
+            "/api/books/" + notFoundKey, HttpMethod.GET, authenticatedRequest(), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }

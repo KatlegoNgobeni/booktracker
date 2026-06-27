@@ -16,7 +16,7 @@ import java.util.UUID;
  * by {@code SecurityConfig.anyRequest().authenticated()}).
  */
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/users")
 public class UserController {
 
     private final UserService userService;

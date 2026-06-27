@@ -64,7 +64,7 @@ class ShelfControllerTest {
      */
     @Test
     void addToShelf_blankOlKey_returns400() throws Exception {
-        mockMvc.perform(post("/shelf")
+        mockMvc.perform(post("/api/shelf")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"olKey\":\"\",\"status\":\"WANT_TO_READ\"}"))
                .andExpect(status().isBadRequest());
@@ -76,7 +76,7 @@ class ShelfControllerTest {
      */
     @Test
     void addToShelf_unknownStatus_returns400() throws Exception {
-        mockMvc.perform(post("/shelf")
+        mockMvc.perform(post("/api/shelf")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"olKey\":\"OL45804W\",\"status\":\"READING\"}"))
                .andExpect(status().isBadRequest());

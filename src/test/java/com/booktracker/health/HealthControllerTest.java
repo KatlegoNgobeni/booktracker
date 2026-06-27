@@ -54,7 +54,7 @@ class HealthControllerTest {
     void healthEndpointReturns200WithStatusOk() throws Exception {
         when(dbHealthIndicator.isDbReachable()).thenReturn(true);
 
-        mockMvc.perform(get("/health"))
+        mockMvc.perform(get("/api/health"))
                .andExpect(status().isOk())
                .andExpect(jsonPath("$.status").value("ok"));
     }
@@ -63,7 +63,7 @@ class HealthControllerTest {
     void healthEndpointReturns503WhenDatabaseIsDown() throws Exception {
         when(dbHealthIndicator.isDbReachable()).thenReturn(false);
 
-        mockMvc.perform(get("/health"))
+        mockMvc.perform(get("/api/health"))
                .andExpect(status().isServiceUnavailable())
                .andExpect(jsonPath("$.status").value("down"));
     }

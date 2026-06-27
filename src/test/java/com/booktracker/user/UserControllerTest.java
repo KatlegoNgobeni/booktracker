@@ -63,7 +63,7 @@ class UserControllerTest {
 
         when(userService.getUserById(any())).thenReturn(dto);
 
-        mockMvc.perform(get("/users/me"))
+        mockMvc.perform(get("/api/users/me"))
                .andExpect(status().isOk())
                .andExpect(jsonPath("$.id").value(userId))
                .andExpect(jsonPath("$.email").value("me@example.com"))
@@ -83,7 +83,7 @@ class UserControllerTest {
 
         when(userService.getUserById(any())).thenReturn(dto);
 
-        mockMvc.perform(get("/users/me"))
+        mockMvc.perform(get("/api/users/me"))
                .andExpect(status().isOk())
                .andExpect(jsonPath("$.password").doesNotExist())
                .andExpect(jsonPath("$.passwordHash").doesNotExist());

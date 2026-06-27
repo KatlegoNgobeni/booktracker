@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;
  * never from request).
  */
 @RestController
-@RequestMapping("/stats")
+@RequestMapping("/api/stats")
 public class StatsController {
 
     private final StatsService statsService;

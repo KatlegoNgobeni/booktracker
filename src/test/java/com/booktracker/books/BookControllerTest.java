@@ -72,7 +72,7 @@ class BookControllerTest {
         var dto = new BookSearchResultDto("OL123W", "Dune", List.of("Frank Herbert"), "123", 1965);
         when(bookService.search("dune", 0, 10)).thenReturn(List.of(dto));
 
-        mockMvc.perform(get("/books/search").param("q", "dune"))
+        mockMvc.perform(get("/api/books/search").param("q", "dune"))
                .andExpect(status().isOk())
                .andExpect(jsonPath("$[0].olKey").value("OL123W"))
                .andExpect(jsonPath("$[0].title").value("Dune"))
@@ -86,7 +86,7 @@ class BookControllerTest {
      */
     @Test
     void search_blankQuery_returns400() throws Exception {
-        mockMvc.perform(get("/books/search").param("q", " "))
+        mockMvc.perform(get("/api/books/search").param("q", " "))
                .andExpect(status().isBadRequest());
     }
 }

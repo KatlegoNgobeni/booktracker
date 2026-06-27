@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>Follows the constructor-injection pattern from {@code HealthController}.
  */
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 public class AuthController {
 
     private final AuthService authService;

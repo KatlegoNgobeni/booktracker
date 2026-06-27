@@ -29,9 +29,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  *   <li>{@code AuthenticationManager @Bean} exposed for use by {@code AuthService.login}</li>
  * </ul>
  *
- * <p><strong>Path note (D-08 / Pitfall 2):</strong> requestMatchers use paths WITHOUT the
- * {@code /api} context-path prefix. Spring Security evaluates paths AFTER the servlet container
- * strips the context-path. Confirmed by the existing {@code /health} permit rule.
+ * <p><strong>Path note (07-01 refactor):</strong> context-path removed from application.properties;
+ * all controllers now declare {@code /api} in their own {@code @RequestMapping}. Security
+ * matchers therefore use full paths (e.g., {@code /api/auth/register}) — no context-path stripping.
  *
  * <p><strong>PasswordEncoder note (Pitfall 3):</strong> The {@code PasswordEncoder} bean is
  * NOT defined here — it lives in {@link PasswordEncoderConfig} to avoid the
@@ -66,7 +66,8 @@ public class SecurityConfig {
      * <ul>
      *   <li>CSRF disabled — stateless API, no browser form submissions</li>
      *   <li>STATELESS session — no server-side session state (T-02-10, Pitfall 4)</li>
-     *   <li>Permit list: /health, /auth/register, /auth/login (D-08, T-02-09)</li>
+     *   <li>3-rule pattern (07-01): bootstrap API endpoints permitAll; all /api/** authenticated;
+     *       everything else (SPA shell + assets) permitAll (T-07-01, T-07-03)</li>
      *   <li>JWT filter before UsernamePasswordAuthenticationFilter (D-09)</li>
      *   <li>DaoAuthenticationProvider registered for credential-based authentication</li>
      * </ul>
@@ -79,15 +80,17 @@ public class SecurityConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // D-08: paths WITHOUT /api prefix (context-path stripped by container)
-                // T-02-09: only these three paths are permitted unauthenticated
-                .requestMatchers("/health").permitAll()
-                .requestMatchers("/auth/register", "/auth/login").permitAll()
+                // T-02-09 / T-07-01: allow register, login, and health unauthenticated
+                .requestMatchers("/api/auth/register", "/api/auth/login", "/api/health").permitAll()
+                // T-07-01: gate all other /api/** paths behind JWT
+                .requestMatchers("/api/**").authenticated()
                 // Allow Spring Boot's /error endpoint so that ResponseStatusException
                 // (e.g. Open Library 404 → our 404) is forwarded to the error handler
                 // without Spring Security blocking the error dispatch with 401.
                 .requestMatchers("/error").permitAll()
-                .anyRequest().authenticated()
+                // T-07-03: SPA shell (index.html) and static assets are intentionally public;
+                // all sensitive data access still requires a JWT at /api/**
+                .anyRequest().permitAll()
             )
             // AUTH-04: Return 401 (not 403) when no valid JWT is present.
             // Spring Security 6 defaults to 403 without an AuthenticationEntryPoint;

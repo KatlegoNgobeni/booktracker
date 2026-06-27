@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
  * {@code GlobalExceptionHandler} handles this transparently.
  */
 @RestController
-@RequestMapping("/goal")
+@RequestMapping("/api/goal")
 public class GoalController {
 
     private final GoalService goalService;

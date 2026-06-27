@@ -70,8 +70,8 @@ class GoalIntegrationTest {
 
     /**
      * TestRestTemplate makes real HTTP calls to the embedded server.
-     * Base URL is automatically set to http://localhost:{randomPort}/api
-     * (includes context-path) — test URLs must omit the /api prefix.
+     * Base URL is automatically set to http://localhost:{randomPort}
+     * (no context-path since 07-01 refactor) — test URLs must include the /api prefix.
      */
     @Autowired
     private TestRestTemplate restTemplate;
@@ -96,7 +96,7 @@ class GoalIntegrationTest {
             "displayName", "GoalTester"
         );
         Map<String, Object> response = restTemplate
-                .postForEntity("/auth/register", registerBody, Map.class)
+                .postForEntity("/api/auth/register", registerBody, Map.class)
                 .getBody();
         authToken = response.get("token").toString();
     }
@@ -124,7 +124,7 @@ class GoalIntegrationTest {
         // PUT /goal — set the goal
         Map<String, Object> putBody = Map.of("targetCount", 12);
         ResponseEntity<Map> putResponse = restTemplate.exchange(
-            "/goal", HttpMethod.PUT,
+            "/api/goal", HttpMethod.PUT,
             new HttpEntity<>(putBody, bearerHeaders()),
             Map.class);
 
@@ -135,7 +135,7 @@ class GoalIntegrationTest {
 
         // GET /goal — retrieve the goal
         ResponseEntity<Map> getResponse = restTemplate.exchange(
-            "/goal", HttpMethod.GET,
+            "/api/goal", HttpMethod.GET,
             new HttpEntity<>(bearerHeaders()),
             Map.class);
 
@@ -156,7 +156,7 @@ class GoalIntegrationTest {
     @SuppressWarnings("unchecked")
     void getGoal_beforeAnyGoalSet_returns404() {
         ResponseEntity<Map> response = restTemplate.exchange(
-            "/goal", HttpMethod.GET,
+            "/api/goal", HttpMethod.GET,
             new HttpEntity<>(bearerHeaders()),
             Map.class);
 
@@ -176,7 +176,7 @@ class GoalIntegrationTest {
     void getGoal_withoutAuth_returns401() {
         // No Authorization header — plain exchange with no headers
         ResponseEntity<Map> response = restTemplate.exchange(
-            "/goal", HttpMethod.GET,
+            "/api/goal", HttpMethod.GET,
             new HttpEntity<>(new HttpHeaders()),
             Map.class);
 

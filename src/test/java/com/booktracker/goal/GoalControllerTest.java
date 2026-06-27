@@ -64,7 +64,7 @@ class GoalControllerTest {
      */
     @Test
     void setGoal_negativeTargetCount_returns400() throws Exception {
-        mockMvc.perform(put("/goal")
+        mockMvc.perform(put("/api/goal")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"targetCount\": -1}"))
                .andExpect(status().isBadRequest());
@@ -75,7 +75,7 @@ class GoalControllerTest {
      */
     @Test
     void setGoal_nullTargetCount_returns400() throws Exception {
-        mockMvc.perform(put("/goal")
+        mockMvc.perform(put("/api/goal")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"targetCount\": null}"))
                .andExpect(status().isBadRequest());

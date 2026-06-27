@@ -117,7 +117,7 @@ class StatsIntegrationTest {
         );
         @SuppressWarnings("unchecked")
         Map<String, Object> response = restTemplate
-                .postForEntity("/auth/register", registerBody, Map.class)
+                .postForEntity("/api/auth/register", registerBody, Map.class)
                 .getBody();
         authToken = response.get("token").toString();
 
@@ -152,7 +152,7 @@ class StatsIntegrationTest {
         seedGoal(testUser, 5);
 
         ResponseEntity<Map> response = restTemplate.exchange(
-            "/stats", HttpMethod.GET,
+            "/api/stats", HttpMethod.GET,
             new HttpEntity<>(bearerHeaders()),
             Map.class);
 
@@ -190,7 +190,7 @@ class StatsIntegrationTest {
     @Test
     void unauthenticatedRequestReturns401() {
         ResponseEntity<Map> response = restTemplate.exchange(
-            "/stats", HttpMethod.GET,
+            "/api/stats", HttpMethod.GET,
             new HttpEntity<>(new HttpHeaders()),
             Map.class);
 
@@ -214,7 +214,7 @@ class StatsIntegrationTest {
                 LocalDate.of(LocalDate.now().getYear(), 2, 10));
 
         ResponseEntity<Map> response = restTemplate.exchange(
-            "/stats", HttpMethod.GET,
+            "/api/stats", HttpMethod.GET,
             new HttpEntity<>(bearerHeaders()),
             Map.class);
 

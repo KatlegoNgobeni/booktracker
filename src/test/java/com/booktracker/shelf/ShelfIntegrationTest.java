@@ -51,7 +51,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * </ul>
  *
  * <p><strong>URL convention:</strong> TestRestTemplate base URL includes the context-path
- * ({@code /api}) — test paths omit {@code /api} prefix (e.g., {@code "/shelf"}).
+ * ({@code /api}) — test paths omit {@code /api} prefix (e.g., {@code "/api/shelf"}).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
@@ -85,8 +85,8 @@ class ShelfIntegrationTest {
 
     /**
      * TestRestTemplate makes real HTTP calls to the embedded server.
-     * Base URL is automatically set to http://localhost:{randomPort}/api
-     * (includes context-path) — test URLs must omit the /api prefix.
+     * Base URL is automatically set to http://localhost:{randomPort}
+     * (no context-path since 07-01 refactor) — test URLs must include the /api prefix.
      */
     @Autowired
     private TestRestTemplate restTemplate;
@@ -119,7 +119,7 @@ class ShelfIntegrationTest {
         );
         @SuppressWarnings("unchecked")
         Map<String, Object> response = restTemplate
-                .postForEntity("/auth/register", registerBody, Map.class)
+                .postForEntity("/api/auth/register", registerBody, Map.class)
                 .getBody();
         authToken = response.get("token").toString();
     }
@@ -171,7 +171,7 @@ class ShelfIntegrationTest {
         Map<String, Object> body = Map.of("olKey", olKey, "status", "WANT_TO_READ");
 
         ResponseEntity<Map> response = restTemplate.exchange(
-            "/shelf", HttpMethod.POST,
+            "/api/shelf", HttpMethod.POST,
             new HttpEntity<>(body, bearerHeaders()),
             Map.class);
 
@@ -196,12 +196,12 @@ class ShelfIntegrationTest {
 
         // First add — should succeed
         ResponseEntity<Map> first = restTemplate.exchange(
-            "/shelf", HttpMethod.POST, request, Map.class);
+            "/api/shelf", HttpMethod.POST, request, Map.class);
         assertThat(first.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
         // Second add — same user + same book → 409
         ResponseEntity<Map> second = restTemplate.exchange(
-            "/shelf", HttpMethod.POST, request, Map.class);
+            "/api/shelf", HttpMethod.POST, request, Map.class);
         assertThat(second.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
 
         Map<?, ?> errorBody = second.getBody();
@@ -225,16 +225,16 @@ class ShelfIntegrationTest {
         String olKey2 = seedBook("D");
 
         // Add two books
-        restTemplate.exchange("/shelf", HttpMethod.POST,
+        restTemplate.exchange("/api/shelf", HttpMethod.POST,
             new HttpEntity<>(Map.of("olKey", olKey1, "status", "WANT_TO_READ"), bearerHeaders()),
             Map.class);
-        restTemplate.exchange("/shelf", HttpMethod.POST,
+        restTemplate.exchange("/api/shelf", HttpMethod.POST,
             new HttpEntity<>(Map.of("olKey", olKey2, "status", "READ"), bearerHeaders()),
             Map.class);
 
         // List shelf
         ResponseEntity<Map> response = restTemplate.exchange(
-            "/shelf", HttpMethod.GET,
+            "/api/shelf", HttpMethod.GET,
             new HttpEntity<>(bearerHeaders()),
             Map.class);
 
@@ -263,16 +263,16 @@ class ShelfIntegrationTest {
         String olKey2 = seedBook("F");
 
         // Add one WANT_TO_READ and one READ
-        restTemplate.exchange("/shelf", HttpMethod.POST,
+        restTemplate.exchange("/api/shelf", HttpMethod.POST,
             new HttpEntity<>(Map.of("olKey", olKey1, "status", "WANT_TO_READ"), bearerHeaders()),
             Map.class);
-        restTemplate.exchange("/shelf", HttpMethod.POST,
+        restTemplate.exchange("/api/shelf", HttpMethod.POST,
             new HttpEntity<>(Map.of("olKey", olKey2, "status", "READ"), bearerHeaders()),
             Map.class);
 
         // Filter by WANT_TO_READ — should return exactly 1 entry
         ResponseEntity<Map> response = restTemplate.exchange(
-            "/shelf?status=WANT_TO_READ", HttpMethod.GET,
+            "/api/shelf?status=WANT_TO_READ", HttpMethod.GET,
             new HttpEntity<>(bearerHeaders()),
             Map.class);
 
@@ -302,7 +302,7 @@ class ShelfIntegrationTest {
         // User A adds a book and captures the entryId
         String olKey = seedBook("G");
         ResponseEntity<Map> addResponse = restTemplate.exchange(
-            "/shelf", HttpMethod.POST,
+            "/api/shelf", HttpMethod.POST,
             new HttpEntity<>(Map.of("olKey", olKey, "status", "WANT_TO_READ"), bearerHeaders()),
             Map.class);
         assertThat(addResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -317,7 +317,7 @@ class ShelfIntegrationTest {
         );
         @SuppressWarnings("unchecked")
         Map<String, Object> responseB = restTemplate
-                .postForEntity("/auth/register", registerB, Map.class)
+                .postForEntity("/api/auth/register", registerB, Map.class)
                 .getBody();
         String tokenB = responseB.get("token").toString();
 
@@ -325,7 +325,7 @@ class ShelfIntegrationTest {
         HttpHeaders headersB = new HttpHeaders();
         headersB.setBearerAuth(tokenB);
         ResponseEntity<Map> getResponse = restTemplate.exchange(
-            "/shelf/" + entryId, HttpMethod.GET,
+            "/api/shelf/" + entryId, HttpMethod.GET,
             new HttpEntity<>(headersB),
             Map.class);
 
@@ -340,7 +340,7 @@ class ShelfIntegrationTest {
     void getMissingEntryReturns404() {
         String randomId = UUID.randomUUID().toString();
         ResponseEntity<Map> response = restTemplate.exchange(
-            "/shelf/" + randomId, HttpMethod.GET,
+            "/api/shelf/" + randomId, HttpMethod.GET,
             new HttpEntity<>(bearerHeaders()),
             Map.class);
 
@@ -361,7 +361,7 @@ class ShelfIntegrationTest {
         String olKey = seedBook("H");
         // Add to shelf
         ResponseEntity<Map> addResponse = restTemplate.exchange(
-            "/shelf", HttpMethod.POST,
+            "/api/shelf", HttpMethod.POST,
             new HttpEntity<>(Map.of("olKey", olKey, "status", "WANT_TO_READ"), bearerHeaders()),
             Map.class);
         assertThat(addResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -374,7 +374,7 @@ class ShelfIntegrationTest {
             "review", "great"
         );
         ResponseEntity<Map> patchResponse = restTemplate.exchange(
-            "/shelf/" + entryId, HttpMethod.PATCH,
+            "/api/shelf/" + entryId, HttpMethod.PATCH,
             new HttpEntity<>(patchBody, bearerHeaders()),
             Map.class);
 
@@ -401,7 +401,7 @@ class ShelfIntegrationTest {
     void updateProgressReturns200() {
         String olKey = seedBook("I");
         ResponseEntity<Map> addResponse = restTemplate.exchange(
-            "/shelf", HttpMethod.POST,
+            "/api/shelf", HttpMethod.POST,
             new HttpEntity<>(Map.of("olKey", olKey, "status", "CURRENTLY_READING"), bearerHeaders()),
             Map.class);
         assertThat(addResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -410,7 +410,7 @@ class ShelfIntegrationTest {
         // PATCH progress
         Map<String, Object> progressBody = Map.of("currentPage", 42);
         ResponseEntity<Map> patchResponse = restTemplate.exchange(
-            "/shelf/" + entryId + "/progress", HttpMethod.PATCH,
+            "/api/shelf/" + entryId + "/progress", HttpMethod.PATCH,
             new HttpEntity<>(progressBody, bearerHeaders()),
             Map.class);
 
@@ -429,7 +429,7 @@ class ShelfIntegrationTest {
     void updateProgressNegativeReturns400() {
         String olKey = seedBook("J");
         ResponseEntity<Map> addResponse = restTemplate.exchange(
-            "/shelf", HttpMethod.POST,
+            "/api/shelf", HttpMethod.POST,
             new HttpEntity<>(Map.of("olKey", olKey, "status", "CURRENTLY_READING"), bearerHeaders()),
             Map.class);
         assertThat(addResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -438,7 +438,7 @@ class ShelfIntegrationTest {
         // PATCH progress with invalid negative value
         Map<String, Object> progressBody = Map.of("currentPage", -1);
         ResponseEntity<Map> patchResponse = restTemplate.exchange(
-            "/shelf/" + entryId + "/progress", HttpMethod.PATCH,
+            "/api/shelf/" + entryId + "/progress", HttpMethod.PATCH,
             new HttpEntity<>(progressBody, bearerHeaders()),
             Map.class);
 
@@ -458,7 +458,7 @@ class ShelfIntegrationTest {
     void removeEntryReturns204() {
         String olKey = seedBook("K");
         ResponseEntity<Map> addResponse = restTemplate.exchange(
-            "/shelf", HttpMethod.POST,
+            "/api/shelf", HttpMethod.POST,
             new HttpEntity<>(Map.of("olKey", olKey, "status", "WANT_TO_READ"), bearerHeaders()),
             Map.class);
         assertThat(addResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -466,7 +466,7 @@ class ShelfIntegrationTest {
 
         // DELETE the entry
         ResponseEntity<Void> deleteResponse = restTemplate.exchange(
-            "/shelf/" + entryId, HttpMethod.DELETE,
+            "/api/shelf/" + entryId, HttpMethod.DELETE,
             new HttpEntity<>(bearerHeaders()),
             Void.class);
 
@@ -474,7 +474,7 @@ class ShelfIntegrationTest {
 
         // Confirm it is gone — subsequent GET should return 404
         ResponseEntity<Map> getResponse = restTemplate.exchange(
-            "/shelf/" + entryId, HttpMethod.GET,
+            "/api/shelf/" + entryId, HttpMethod.GET,
             new HttpEntity<>(bearerHeaders()),
             Map.class);
         assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
@@ -493,7 +493,7 @@ class ShelfIntegrationTest {
         // User A adds entry
         String olKey = seedBook("L");
         ResponseEntity<Map> addResponse = restTemplate.exchange(
-            "/shelf", HttpMethod.POST,
+            "/api/shelf", HttpMethod.POST,
             new HttpEntity<>(Map.of("olKey", olKey, "status", "WANT_TO_READ"), bearerHeaders()),
             Map.class);
         assertThat(addResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -507,7 +507,7 @@ class ShelfIntegrationTest {
         headersB.setBearerAuth(tokenB);
         Map<String, Object> patchBody = Map.of("status", "READ");
         ResponseEntity<Map> patchResponse = restTemplate.exchange(
-            "/shelf/" + entryId, HttpMethod.PATCH,
+            "/api/shelf/" + entryId, HttpMethod.PATCH,
             new HttpEntity<>(patchBody, headersB),
             Map.class);
 
@@ -523,7 +523,7 @@ class ShelfIntegrationTest {
         // User A adds entry
         String olKey = seedBook("M");
         ResponseEntity<Map> addResponse = restTemplate.exchange(
-            "/shelf", HttpMethod.POST,
+            "/api/shelf", HttpMethod.POST,
             new HttpEntity<>(Map.of("olKey", olKey, "status", "WANT_TO_READ"), bearerHeaders()),
             Map.class);
         assertThat(addResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -536,7 +536,7 @@ class ShelfIntegrationTest {
         HttpHeaders headersB = new HttpHeaders();
         headersB.setBearerAuth(tokenB);
         ResponseEntity<Map> deleteResponse = restTemplate.exchange(
-            "/shelf/" + entryId, HttpMethod.DELETE,
+            "/api/shelf/" + entryId, HttpMethod.DELETE,
             new HttpEntity<>(headersB),
             Map.class);
 
@@ -560,7 +560,7 @@ class ShelfIntegrationTest {
             "displayName", "ShelfTesterB"
         );
         Map<String, Object> response = restTemplate
-                .postForEntity("/auth/register", registerBody, Map.class)
+                .postForEntity("/api/auth/register", registerBody, Map.class)
                 .getBody();
         return response.get("token").toString();
     }

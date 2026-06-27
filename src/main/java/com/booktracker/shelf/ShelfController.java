@@ -35,7 +35,7 @@ import java.util.UUID;
  * (Pattern 7 in RESEARCH.md, Pitfall 8).
  */
 @RestController
-@RequestMapping("/shelf")
+@RequestMapping("/api/shelf")
 public class ShelfController {
 
     private final ShelfService shelfService;

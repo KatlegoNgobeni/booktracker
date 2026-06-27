@@ -72,8 +72,8 @@ class AuthIntegrationTest {
 
     /**
      * TestRestTemplate makes real HTTP calls to the embedded server.
-     * Base URL is automatically set to http://localhost:{randomPort}/api
-     * (includes context-path) — test URLs must omit the /api prefix.
+     * Base URL is automatically set to http://localhost:{randomPort}
+     * (no context-path since 07-01 refactor) — test URLs must include the /api prefix.
      */
     @Autowired
     private TestRestTemplate restTemplate;
@@ -98,7 +98,7 @@ class AuthIntegrationTest {
         );
 
         ResponseEntity<Map> response = restTemplate.postForEntity(
-            "/auth/register", body, Map.class);
+            "/api/auth/register", body, Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
@@ -133,11 +133,11 @@ class AuthIntegrationTest {
         );
 
         ResponseEntity<Map> first = restTemplate.postForEntity(
-            "/auth/register", body, Map.class);
+            "/api/auth/register", body, Map.class);
         assertThat(first.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
         ResponseEntity<Map> second = restTemplate.postForEntity(
-            "/auth/register", body, Map.class);
+            "/api/auth/register", body, Map.class);
         assertThat(second.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
 
         Map<?, ?> errorBody = second.getBody();
@@ -161,7 +161,7 @@ class AuthIntegrationTest {
             "password",    "securepassword123",
             "displayName", "Charlie"
         );
-        restTemplate.postForEntity("/auth/register", registerBody, Map.class);
+        restTemplate.postForEntity("/api/auth/register", registerBody, Map.class);
 
         // Login
         Map<String, Object> loginBody = Map.of(
@@ -169,7 +169,7 @@ class AuthIntegrationTest {
             "password", "securepassword123"
         );
         ResponseEntity<Map> response = restTemplate.postForEntity(
-            "/auth/login", loginBody, Map.class);
+            "/api/auth/login", loginBody, Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         Map<?, ?> responseBody = response.getBody();
@@ -198,7 +198,7 @@ class AuthIntegrationTest {
             "password",    "correctpassword123",
             "displayName", "Diana"
         );
-        restTemplate.postForEntity("/auth/register", registerBody, Map.class);
+        restTemplate.postForEntity("/api/auth/register", registerBody, Map.class);
 
         // Login with wrong password
         Map<String, Object> loginBody = Map.of(
@@ -206,7 +206,7 @@ class AuthIntegrationTest {
             "password", "wrongpassword123"
         );
         ResponseEntity<Map> response = restTemplate.postForEntity(
-            "/auth/login", loginBody, Map.class);
+            "/api/auth/login", loginBody, Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         Map<?, ?> body = response.getBody();
@@ -227,7 +227,7 @@ class AuthIntegrationTest {
             "password", "anypassword123"
         );
         ResponseEntity<Map> response = restTemplate.postForEntity(
-            "/auth/login", loginBody, Map.class);
+            "/api/auth/login", loginBody, Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         Map<?, ?> body = response.getBody();
@@ -254,7 +254,7 @@ class AuthIntegrationTest {
             "displayName", "Eve"
         );
         ResponseEntity<Map> registerResponse = restTemplate.postForEntity(
-            "/auth/register", registerBody, Map.class);
+            "/api/auth/register", registerBody, Map.class);
         assertThat(registerResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         String token = registerResponse.getBody().get("token").toString();
 
@@ -263,7 +263,7 @@ class AuthIntegrationTest {
         headers.setBearerAuth(token);
         HttpEntity<Void> request = new HttpEntity<>(headers);
         ResponseEntity<Map> response = restTemplate.exchange(
-            "/users/me", HttpMethod.GET, request, Map.class);
+            "/api/users/me", HttpMethod.GET, request, Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         Map<?, ?> body = response.getBody();
@@ -283,7 +283,7 @@ class AuthIntegrationTest {
     @SuppressWarnings("unchecked")
     void getMeNoToken_returns401() {
         ResponseEntity<Map> response = restTemplate.exchange(
-            "/users/me", HttpMethod.GET, HttpEntity.EMPTY, Map.class);
+            "/api/users/me", HttpMethod.GET, HttpEntity.EMPTY, Map.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
@@ -297,7 +297,7 @@ class AuthIntegrationTest {
         headers.set("Authorization", "Bearer not-a-real-jwt");
         HttpEntity<Void> request = new HttpEntity<>(headers);
         ResponseEntity<Map> response = restTemplate.exchange(
-            "/users/me", HttpMethod.GET, request, Map.class);
+            "/api/users/me", HttpMethod.GET, request, Map.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
@@ -315,7 +315,7 @@ class AuthIntegrationTest {
             "displayName", "Frank"
         );
         ResponseEntity<Map> registerResponse = restTemplate.postForEntity(
-            "/auth/register", registerBody, Map.class);
+            "/api/auth/register", registerBody, Map.class);
         String token = registerResponse.getBody().get("token").toString();
 
         // Make authenticated request
@@ -323,7 +323,7 @@ class AuthIntegrationTest {
         headers.setBearerAuth(token);
         HttpEntity<Void> request = new HttpEntity<>(headers);
         ResponseEntity<Map> response = restTemplate.exchange(
-            "/users/me", HttpMethod.GET, request, Map.class);
+            "/api/users/me", HttpMethod.GET, request, Map.class);
 
         // No Set-Cookie: JSESSIONID= header (T-02-10, Pitfall 4)
         assertThat(response.getHeaders().get("Set-Cookie")).satisfiesAnyOf(

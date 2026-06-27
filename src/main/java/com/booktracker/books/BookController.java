@@ -33,7 +33,7 @@ import java.util.List;
  * {@code /works/} before querying or persisting.
  */
 @RestController
-@RequestMapping("/books")
+@RequestMapping("/api/books")
 @Validated
 public class BookController {
 

@@ -72,7 +72,7 @@ class AuthControllerTest {
      */
     @Test
     void registerInvalidEmail_returns400WithValidationFailed() throws Exception {
-        mockMvc.perform(post("/auth/register")
+        mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"not-an-email\",\"password\":\"password123\",\"displayName\":\"Test User\"}"))
                .andExpect(status().isBadRequest())
@@ -85,7 +85,7 @@ class AuthControllerTest {
      */
     @Test
     void registerShortPassword_returns400WithValidationFailed() throws Exception {
-        mockMvc.perform(post("/auth/register")
+        mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"user@example.com\",\"password\":\"short\",\"displayName\":\"Test User\"}"))
                .andExpect(status().isBadRequest())

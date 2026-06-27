@@ -26,7 +26,7 @@ import java.util.Map;
  * indicator is never {@code null}.
  */
 @RestController
-@RequestMapping("/health")
+@RequestMapping("/api/health")
 public class HealthController {
 
     private final DbHealthIndicator dbHealthIndicator;
