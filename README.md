@@ -4,7 +4,7 @@
 
 A mobile-first personal reading tracker — your Goodreads, done right. Log books, track reading progress, rate and review, set a yearly reading goal, and see personal analytics, all from a PWA you can install on your phone.
 
-**Live app:** [https://booktracker-\<service\>.onrender.com](https://booktracker-service.onrender.com)
+**Live app:** [https://booktracker-m0tr.onrender.com](https://booktracker-m0tr.onrender.com)
 
 > **Note:** the free-tier Render web service spins down after ~15 minutes of inactivity.
 > The first request after idle takes ~30 seconds (cold start). This is expected behaviour, not a bug.
