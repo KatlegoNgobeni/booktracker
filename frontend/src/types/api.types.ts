@@ -105,3 +105,53 @@ export interface Page<T> {
   totalPages: number;
   totalElements: number;
 }
+
+// ────────────────────────────────────────────────────────
+// Social layer types (Phase 8 — SOCIAL-01/02/03)
+// Derived from: PublicShelfEntryDto, PublicProfileDto, FeedItemDto, FollowStatusDto
+// ────────────────────────────────────────────────────────
+
+// Derived from PublicShelfEntryDto.java
+export interface PublicShelfEntry {
+  entryId: string;
+  title: string;
+  authors: string | null;    // comma-joined; nullable
+  coverId: string | null;
+  olKey: string;             // short form e.g. "OL45804W"
+  rating: number | null;     // 1–5 or null
+  review: string | null;
+  dateFinished: string | null; // ISO date YYYY-MM-DD
+}
+
+// Derived from PublicProfileDto.java (@JsonInclude(NON_NULL) — optional fields absent when null)
+export interface PublicProfile {
+  userId: string;
+  displayName: string;
+  followerCount: number;
+  followingCount: number;
+  isFollowing: boolean;          // does the authenticated user follow this profile?
+  goalTarget?: number;           // absent if no goal set
+  goalProgressPercent?: number;  // absent if no goal set; capped at 100.0
+  booksReadThisYear: number;
+  readEntries: Page<PublicShelfEntry>; // paginated READ shelf
+}
+
+// Derived from FeedItemDto.java (@JsonInclude(NON_NULL))
+export interface FeedItem {
+  entryId: string;           // user_books UUID (dedup key + click-through)
+  userId: string;            // the reader (link to /users/:id)
+  displayName: string;       // the reader's display name
+  bookTitle: string;
+  bookOlKey: string;         // short form; link to /books/:olKey
+  bookCoverId: string | null;
+  bookAuthors: string | null; // comma-joined
+  rating: number | null;
+  review: string | null;
+  dateFinished: string;      // ISO date YYYY-MM-DD (relative timestamp)
+  createdAt: string;         // ISO OffsetDateTime (entry creation time)
+}
+
+// Derived from FollowStatusDto.java
+export interface FollowStatus {
+  following: boolean;
+}

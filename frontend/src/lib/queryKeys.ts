@@ -18,4 +18,9 @@ export const QUERY_KEYS = {
   goal: (): readonly string[] => ['goal'],
   me: (): readonly string[] => ['me'],
   search: (q: string): readonly string[] => ['search', q],
+  // Social layer keys — include numeric page param so `readonly (string | number)[]`
+  feed: (page?: number): readonly (string | number)[] =>
+    page !== undefined ? ['feed', page] : ['feed'],
+  profile: (userId: string, page?: number): readonly (string | number)[] =>
+    page !== undefined ? ['profile', userId, page] : ['profile', userId],
 } as const;
