@@ -1,6 +1,7 @@
 package com.booktracker.social;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.data.domain.Page;
 
 /**
@@ -74,6 +75,7 @@ public class PublicProfileDto {
         return followingCount;
     }
 
+    @JsonProperty("isFollowing")
     public boolean isFollowing() {
         return isFollowing;
     }
