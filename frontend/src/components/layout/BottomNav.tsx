@@ -1,16 +1,19 @@
 /**
  * BottomNav.tsx — Mobile bottom navigation bar (UI-02)
  *
- * Five tabs: Search, Shelf, Stats, Profile.
+ * Five tabs: Search, Shelf, Stats, Profile, Feed.
+ * Feed tab added in Phase 8 (SOCIAL-03) — Rss icon from lucide-react (verified available).
+ * Fallback: Activity icon if Rss is unavailable (RESEARCH Assumption A1).
  */
 import { NavLink } from 'react-router-dom';
-import { Search, BookOpen, BarChart2, User } from 'lucide-react';
+import { Search, BookOpen, BarChart2, User, Rss } from 'lucide-react';
 
 const tabs = [
   { to: '/search', label: 'Search', icon: Search },
   { to: '/shelf', label: 'Shelf', icon: BookOpen },
   { to: '/stats', label: 'Stats', icon: BarChart2 },
   { to: '/profile', label: 'Profile', icon: User },
+  { to: '/feed', label: 'Feed', icon: Rss },
 ];
 
 export function BottomNav() {

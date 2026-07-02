@@ -3,7 +3,8 @@
  *
  * Public routes:  /login, /register
  * Protected routes (require JWT): /shelf, /search, /stats, /profile,
- *                                  /books/:olKey, /shelf/:id/edit
+ *                                  /books/:olKey, /shelf/:id/edit,
+ *                                  /feed (SOCIAL-03), /users/:id (SOCIAL-02)
  */
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
@@ -16,6 +17,8 @@ import { ShelfEntryEditorPage } from './pages/shelf/ShelfEntryEditorPage';
 import { BookDetailPage } from './pages/book/BookDetailPage';
 import { StatsPage } from './pages/stats/StatsPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
+import { FeedPage } from './pages/social/FeedPage';
+import { UserPublicProfilePage } from './pages/social/UserPublicProfilePage';
 
 export default function App() {
   return (
@@ -33,6 +36,9 @@ export default function App() {
           <Route path="/books/:olKey" element={<BookDetailPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          {/* Social layer routes (Phase 8) */}
+          <Route path="/feed" element={<FeedPage />} />
+          <Route path="/users/:id" element={<UserPublicProfilePage />} />
         </Route>
       </Route>
 
