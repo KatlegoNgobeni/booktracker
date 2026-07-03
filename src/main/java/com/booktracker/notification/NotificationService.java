@@ -3,18 +3,18 @@ package com.booktracker.notification;
 import com.booktracker.user.UserEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
 /**
- * Business logic for the notification domain (NOTIF-01 persistence, NOTIF-03 read API).
+ * Business logic for the notification domain (NOTIF-01 persistence, NOTIF-02 push, NOTIF-03 read API).
  *
- * <p><strong>Plan 09-03 scope — persist-only:</strong>
- * This service persists notifications and serves the read/mark-read REST API.
- * WebSocket push ({@code SimpMessagingTemplate}) is NOT injected here — that is added
- * in Plan 09-04 which augments {@link #createNotification} to also push.
+ * <p><strong>Plan 09-04 augmentation:</strong>
+ * {@link SimpMessagingTemplate} is now injected and used in {@link #createNotification} to push
+ * the notification to the recipient's STOMP queue immediately after persisting.
  *
  * <p><strong>Security invariants:</strong>
  * <ul>
@@ -24,37 +24,69 @@ import java.util.UUID;
  *       — rows for other users are never updated.</li>
  * </ul>
  *
+ * <p><strong>Pitfall 2 prevention (RESEARCH):</strong>
+ * {@code convertAndSendToUser} is called with {@code recipient.getUsername()} as the user argument.
+ * {@code UserEntity.getUsername()} returns {@code id.toString()} — the UUID string — which exactly
+ * matches the principal name set by {@code JwtChannelInterceptor.accessor.setUser(auth)}.
+ * Passing any other string (e.g. email) causes silent delivery failure.
+ *
  * <p><strong>Pitfall 6 prevention (RESEARCH):</strong>
  * {@code NotificationService} does NOT inject {@code ShelfService} — avoids the
  * {@code NotificationService} ↔ {@code ShelfService} circular dependency. The
  * {@code FRIEND_FINISHED_BOOK} trigger in Plan 09-04 passes only {@code entityId} (UUID),
  * not a full shelf DTO.
  *
+ * <p><strong>Push safety (RESEARCH Assumption A3):</strong>
+ * {@code SimpMessagingTemplate.convertAndSendToUser()} is a safe no-op when the recipient is
+ * not connected — Spring silently discards the message. No exception is thrown, so the
+ * {@code @Transactional} method does not roll back when the recipient is offline.
+ *
  * <p><strong>Transactional import:</strong> Uses {@code org.springframework.transaction.annotation.Transactional}
  * (Spring), NOT {@code jakarta.transaction.Transactional} — avoids the Jakarta namespace pitfall
  * from CLAUDE.md §Version Gotchas.
- *
- * <p><strong>Constructor injection:</strong> Only {@link NotificationRepository} — no
- * {@code SimpMessagingTemplate} in this plan (added in Plan 09-04).
  */
 @Service
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    public NotificationService(NotificationRepository notificationRepository) {
+    /**
+     * Constructor injection — {@link SimpMessagingTemplate} is available once
+     * {@code spring-boot-starter-websocket} is on the classpath and {@code @EnableWebSocketMessageBroker}
+     * is active in {@link com.booktracker.config.WebSocketConfig}.
+     *
+     * @param notificationRepository notification persistence store
+     * @param messagingTemplate      STOMP messaging template for user-targeted push delivery
+     */
+    public NotificationService(NotificationRepository notificationRepository,
+                               SimpMessagingTemplate messagingTemplate) {
         this.notificationRepository = notificationRepository;
+        this.messagingTemplate = messagingTemplate;
     }
 
     /**
-     * Persist a notification for the given recipient.
+     * Persist a notification for the given recipient AND push it to their STOMP queue if connected.
      *
-     * <p>Plan 09-03: persist-only — no WebSocket push. Plan 09-04 adds push by augmenting
-     * this method with {@code SimpMessagingTemplate.convertAndSendToUser()}.
+     * <p>Steps:
+     * <ol>
+     *   <li>Persist a {@link NotificationEntity} row (NOTIF-01)</li>
+     *   <li>Build a {@link NotificationDto} from the saved entity</li>
+     *   <li>Push via {@code messagingTemplate.convertAndSendToUser(recipient.getUsername(),
+     *       "/queue/notifications", dto)} (NOTIF-02)</li>
+     * </ol>
      *
-     * <p>Called by FriendRequestService (Plan 09-04) and LikeService (Plan 09-04) when events occur.
-     * The caller is responsible for passing the recipient and actor — this service never
-     * queries other domains (Pitfall 6 prevention).
+     * <p><strong>RESEARCH Pitfall 2 (principal name):</strong>
+     * {@code recipient.getUsername()} == {@code recipient.getId().toString()} — the UUID string.
+     * This must exactly match {@code JwtChannelInterceptor.accessor.getUser().getName()}.
+     *
+     * <p><strong>RESEARCH Pitfall 6 (circular dependency):</strong>
+     * This service does NOT import ShelfService. Callers pass the {@code entityId} (UUID) only.
+     *
+     * <p><strong>RESEARCH Pitfall anti-patterns (synchronous call):</strong>
+     * Push is synchronous within the same {@code @Transactional} method — consistent with
+     * RESEARCH Pattern 3 and RESOLVED Open Question 1. Calling from {@code @Async} or
+     * {@code @EventListener} can cause IllegalStateException on detached entities.
      *
      * @param recipient the user who should receive the notification
      * @param type      the notification type (stored as type.name())
@@ -71,7 +103,19 @@ public class NotificationService {
         entity.setActor(actor);
         entity.setEntityId(entityId);
         // isRead defaults to false (field initializer + V5 column default)
-        return notificationRepository.save(entity);
+        NotificationEntity saved = notificationRepository.save(entity);
+
+        // NOTIF-02: Push to the recipient's STOMP queue if they are connected.
+        // convertAndSendToUser is a safe no-op when recipient has no active STOMP session.
+        // Routing: /user/{recipient.getUsername()}/queue/notifications
+        NotificationDto dto = toDto(saved);
+        messagingTemplate.convertAndSendToUser(
+                recipient.getUsername(),    // UUID string — matches STOMP principal name (Pitfall 2)
+                "/queue/notifications",     // destination without /user prefix (Spring adds it)
+                dto
+        );
+
+        return saved;
     }
 
     /**

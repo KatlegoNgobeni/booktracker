@@ -82,6 +82,11 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // T-02-09 / T-07-01: allow register, login, and health unauthenticated
                 .requestMatchers("/api/auth/register", "/api/auth/login", "/api/health").permitAll()
+                // T-09-SC / RESEARCH Pitfall 1: /ws/** SockJS handshake + transport endpoints
+                // must be permitted here so the HTTP→WS upgrade is not blocked by the JWT filter.
+                // Authentication for WebSocket connections happens at the STOMP CONNECT layer
+                // via JwtChannelInterceptor — NOT at the HTTP layer.
+                .requestMatchers("/ws/**").permitAll()
                 // T-07-01: gate all other /api/** paths behind JWT
                 .requestMatchers("/api/**").authenticated()
                 // Allow Spring Boot's /error endpoint so that ResponseStatusException
