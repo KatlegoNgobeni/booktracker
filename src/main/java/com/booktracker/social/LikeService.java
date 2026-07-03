@@ -1,6 +1,9 @@
 package com.booktracker.social;
 
+import com.booktracker.notification.NotificationService;
+import com.booktracker.notification.NotificationType;
 import com.booktracker.shelf.ShelfRepository;
+import com.booktracker.shelf.UserBookEntity;
 import com.booktracker.user.UserEntity;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -40,10 +43,20 @@ public class LikeService {
 
     private final LikeRepository likeRepository;
     private final ShelfRepository shelfRepository;
+    private final NotificationService notificationService;
 
-    public LikeService(LikeRepository likeRepository, ShelfRepository shelfRepository) {
+    /**
+     * Constructor injection — NotificationService added in Plan 09-04 for REVIEW_LIKED trigger.
+     *
+     * @param likeRepository      like persistence store
+     * @param shelfRepository     shelf entry lookup for entry existence check and owner resolution
+     * @param notificationService notification persist+push for REVIEW_LIKED trigger
+     */
+    public LikeService(LikeRepository likeRepository, ShelfRepository shelfRepository,
+                       NotificationService notificationService) {
         this.likeRepository = likeRepository;
         this.shelfRepository = shelfRepository;
+        this.notificationService = notificationService;
     }
 
     /**
@@ -63,7 +76,7 @@ public class LikeService {
     @Transactional
     public void likeReview(UUID entryId, UserEntity currentUser) {
         // T-09-09: Verify entry exists before writing — 404 if absent
-        var entry = shelfRepository.findById(entryId)
+        UserBookEntity entry = shelfRepository.findById(entryId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entry not found"));
 
         LikeEntity like = new LikeEntity();
@@ -77,6 +90,15 @@ public class LikeService {
         } catch (DataIntegrityViolationException e) {
             // review_likes_pair_uq constraint fired — user already liked this entry
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Already liked this entry");
+        }
+
+        // NOTIF-01 trigger: persist+push REVIEW_LIKED notification to the entry owner,
+        // but ONLY when the liker is NOT the entry owner (no self-like notifications).
+        // Safe no-op when owner is not connected (RESEARCH Assumption A3).
+        UserEntity owner = entry.getUser();
+        if (!owner.getId().equals(currentUser.getId())) {
+            notificationService.createNotification(owner, NotificationType.REVIEW_LIKED,
+                    currentUser, entryId);
         }
     }
 

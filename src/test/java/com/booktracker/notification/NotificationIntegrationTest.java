@@ -629,10 +629,10 @@ class NotificationIntegrationTest {
         readingEntry.setShelfStatus(ShelfStatus.CURRENTLY_READING);
         readingEntry = shelfRepository.save(readingEntry);
 
-        // bookFinisher marks the entry READ via PATCH metadata
+        // bookFinisher marks the entry READ via PATCH /api/shelf/{id}
         Map<String, Object> metaBody = Map.of("status", "READ");
         ResponseEntity<Map> updateResp = restTemplate.exchange(
-            "/api/entries/" + readingEntry.getId() + "/metadata",
+            "/api/shelf/" + readingEntry.getId(),
             HttpMethod.PATCH,
             new HttpEntity<>(metaBody, bearerHeadersFor(bookFinisher.token)),
             Map.class);

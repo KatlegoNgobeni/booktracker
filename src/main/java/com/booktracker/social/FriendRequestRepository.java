@@ -1,6 +1,7 @@
 package com.booktracker.social;
 
 import com.booktracker.shelf.UserBookEntity;
+import com.booktracker.user.UserEntity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -109,6 +110,32 @@ public interface FriendRequestRepository extends JpaRepository<FriendRequestEnti
      * @param pageable page/size/sort
      * @return paginated READ entries from accepted friends, ordered by dateFinished DESC
      */
+    /**
+     * Find all ACCEPTED friend request rows where the given user is either requester or recipient.
+     *
+     * <p>Used by {@link com.booktracker.shelf.ShelfService#updateMetadata} to fan out
+     * {@code FRIEND_FINISHED_BOOK} notifications when a book is marked READ. The service
+     * derives the "other" user from each row in Java (requester when current user is recipient,
+     * recipient when current user is requester).
+     *
+     * <p>JOIN FETCHes both requester and recipient so the {@link UserEntity} objects
+     * are fully initialised for notification routing without additional queries.
+     *
+     * <p><strong>Note (Hibernate 6):</strong> JPQL CASE WHEN cannot return entity objects in
+     * Hibernate 6 (ClassCastException: SingleTableEntityPersister cannot be cast to
+     * BasicValuedMapping). Returning the FriendRequestEntity and extracting the friend in Java
+     * is the correct approach.
+     *
+     * @param userId UUID of the user whose accepted friends are needed
+     * @return list of ACCEPTED {@link FriendRequestEntity} rows involving the given user
+     */
+    @Query("SELECT fr FROM FriendRequestEntity fr " +
+           "JOIN FETCH fr.requester " +
+           "JOIN FETCH fr.recipient " +
+           "WHERE (fr.requester.id = :userId OR fr.recipient.id = :userId) " +
+           "  AND fr.status = 'ACCEPTED'")
+    List<FriendRequestEntity> findAcceptedRelationships(@Param("userId") UUID userId);
+
     @Query(
         value =
             "SELECT ub FROM UserBookEntity ub " +

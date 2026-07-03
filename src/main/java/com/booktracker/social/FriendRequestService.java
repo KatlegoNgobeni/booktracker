@@ -1,5 +1,7 @@
 package com.booktracker.social;
 
+import com.booktracker.notification.NotificationService;
+import com.booktracker.notification.NotificationType;
 import com.booktracker.user.UserEntity;
 import com.booktracker.user.UserRepository;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -49,11 +51,21 @@ public class FriendRequestService {
 
     private final FriendRequestRepository friendRequestRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
+    /**
+     * Constructor injection — NotificationService added in Plan 09-04 for notification triggers.
+     *
+     * @param friendRequestRepository friend request persistence store
+     * @param userRepository          user lookup for recipient resolution
+     * @param notificationService     notification persist+push for FRIEND_REQUEST and FRIEND_ACCEPTED
+     */
     public FriendRequestService(FriendRequestRepository friendRequestRepository,
-                                UserRepository userRepository) {
+                                UserRepository userRepository,
+                                NotificationService notificationService) {
         this.friendRequestRepository = friendRequestRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     /**
@@ -102,6 +114,11 @@ public class FriendRequestService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Already connected or pending");
         }
 
+        // NOTIF-01 trigger: persist+push FRIEND_REQUEST notification to the recipient
+        // Safe no-op when recipient is not connected (RESEARCH Assumption A3)
+        notificationService.createNotification(recipient, NotificationType.FRIEND_REQUEST,
+                currentUser, entity.getId());
+
         return toDto(entity);
     }
 
@@ -127,8 +144,17 @@ public class FriendRequestService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not authorized to accept this request");
         }
 
+        // Capture requester before modifying entity (still within lazy-load boundary)
+        UserEntity requester = entity.getRequester();
+
         entity.setStatus("ACCEPTED");
         entity = friendRequestRepository.save(entity);
+
+        // NOTIF-01 trigger: persist+push FRIEND_ACCEPTED notification to the original requester
+        // Safe no-op when requester is not connected (RESEARCH Assumption A3)
+        notificationService.createNotification(requester, NotificationType.FRIEND_ACCEPTED,
+                currentUser, entity.getId());
+
         return toDto(entity);
     }
 
