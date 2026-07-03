@@ -55,17 +55,20 @@ public class SocialService {
     private final ShelfRepository shelfRepository;
     private final GoalRepository goalRepository;
     private final FriendRequestRepository friendRequestRepository;
+    private final LikeRepository likeRepository;
 
     public SocialService(FollowRepository followRepository,
                          UserRepository userRepository,
                          ShelfRepository shelfRepository,
                          GoalRepository goalRepository,
-                         FriendRequestRepository friendRequestRepository) {
+                         FriendRequestRepository friendRequestRepository,
+                         LikeRepository likeRepository) {
         this.followRepository = followRepository;
         this.userRepository = userRepository;
         this.shelfRepository = shelfRepository;
         this.goalRepository = goalRepository;
         this.friendRequestRepository = friendRequestRepository;
+        this.likeRepository = likeRepository;
     }
 
     /**
@@ -187,7 +190,8 @@ public class SocialService {
 
         Double goalProgressPercent = computeGoalProgress(booksReadThisYear, goalTarget);
 
-        Page<PublicShelfEntryDto> readEntryDtos = readEntries.map(this::toPublicEntryDto);
+        UUID currentUserId = currentUser.getId();
+        Page<PublicShelfEntryDto> readEntryDtos = readEntries.map(ub -> toPublicEntryDto(ub, currentUserId));
 
         return new PublicProfileDto(
                 target.getId().toString(),
@@ -256,18 +260,30 @@ public class SocialService {
      * <p>The short olKey strips the {@code /works/} prefix to match the convention in
      * {@code ShelfService.toDto()} (D-08).
      * Rating is null-safe Short → Integer conversion.
+     *
+     * <p>{@code likeCount} and {@code likedByMe} (DISC-04) are populated from
+     * {@link LikeRepository} queries. {@code likedByMe} is scoped to {@code currentUserId}
+     * from the viewing user's JWT — never from the request (T-09-07 IDOR mitigation).
+     *
+     * @param ub            the shelf entry to map
+     * @param currentUserId the UUID of the authenticated viewer (from @AuthenticationPrincipal)
      */
-    private PublicShelfEntryDto toPublicEntryDto(UserBookEntity ub) {
+    private PublicShelfEntryDto toPublicEntryDto(UserBookEntity ub, UUID currentUserId) {
         var book = ub.getBook();
+        UUID entryId = ub.getId();
+        int likeCount = (int) likeRepository.countByEntryId(entryId);
+        boolean likedByMe = likeRepository.existsByUserIdAndEntryId(currentUserId, entryId);
         return new PublicShelfEntryDto(
-                ub.getId().toString(),
+                entryId.toString(),
                 book.getTitle(),
                 book.getAuthors(),
                 book.getCoverId(),
                 book.getOpenLibraryKey().replaceFirst("^/works/", ""),
                 ub.getRating() != null ? ub.getRating().intValue() : null,
                 ub.getReview(),
-                ub.getDateFinished()
+                ub.getDateFinished(),
+                likeCount,
+                likedByMe
         );
     }
 
