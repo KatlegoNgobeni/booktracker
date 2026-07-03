@@ -3,13 +3,20 @@ package com.booktracker.social;
 import com.booktracker.user.UserEntity;
 import com.booktracker.user.UserRepository;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Business logic for the friend-request state machine (D-01, DISC-02).
@@ -187,6 +194,83 @@ public class FriendRequestService {
                 .stream()
                 .map(this::toDto)
                 .toList();
+    }
+
+    /**
+     * Search for users by display name and annotate each result with the current friendship
+     * state (DISC-01, D-05, D-06).
+     *
+     * <p><strong>No N+1 (RESEARCH Open Question 2):</strong>
+     * After retrieving the result page, a single call to
+     * {@link FriendRequestRepository#findRelationshipsForUser} fetches all relevant
+     * friend_requests rows for the page's user ids. The status of each row is then
+     * mapped in-memory to the appropriate {@link FriendStatus} value.
+     *
+     * <p><strong>T-09-04:</strong> The {@code query} parameter is passed as a JPQL bind
+     * parameter — no string concatenation.
+     *
+     * @param query       search term (case-insensitive display name fragment)
+     * @param pageable    page/size
+     * @param currentUser authenticated user (results exclude this user, status computed relative to them)
+     * @return paginated {@link UserSearchResultDto} with friendStatus per result
+     */
+    @Transactional(readOnly = true)
+    public Page<UserSearchResultDto> searchUsers(String query, Pageable pageable, UserEntity currentUser) {
+        Page<UserEntity> userPage = userRepository.searchByDisplayName(
+                query, currentUser.getId(), pageable);
+
+        // Single bulk query for all relevant friend_request rows — avoids N+1
+        Set<UUID> pageUserIds = userPage.getContent().stream()
+                .map(UserEntity::getId)
+                .collect(Collectors.toSet());
+
+        Map<UUID, FriendRequestEntity> relationshipMap = new HashMap<>();
+
+        if (!pageUserIds.isEmpty()) {
+            List<FriendRequestEntity> relationships =
+                    friendRequestRepository.findRelationshipsForUser(currentUser.getId(), pageUserIds);
+
+            for (FriendRequestEntity fr : relationships) {
+                // For each row, map by the OTHER user's id
+                UUID otherUserId = fr.getRequester().getId().equals(currentUser.getId())
+                        ? fr.getRecipient().getId()
+                        : fr.getRequester().getId();
+                // Keep only the most relevant row per pair (overwrite with any ACCEPTED)
+                FriendRequestEntity existing = relationshipMap.get(otherUserId);
+                if (existing == null || "ACCEPTED".equals(fr.getStatus())) {
+                    relationshipMap.put(otherUserId, fr);
+                }
+            }
+        }
+
+        return userPage.map(user -> {
+            FriendRequestEntity fr = relationshipMap.get(user.getId());
+            FriendStatus friendStatus;
+            String requestId = null;
+
+            if (fr == null || "REJECTED".equals(fr.getStatus()) || "CANCELLED".equals(fr.getStatus())) {
+                friendStatus = FriendStatus.NONE;
+            } else if ("ACCEPTED".equals(fr.getStatus())) {
+                friendStatus = FriendStatus.ACCEPTED;
+            } else if ("PENDING".equals(fr.getStatus())) {
+                // PENDING: direction matters
+                if (fr.getRequester().getId().equals(currentUser.getId())) {
+                    friendStatus = FriendStatus.PENDING_SENT;
+                } else {
+                    friendStatus = FriendStatus.PENDING_RECEIVED;
+                }
+                requestId = fr.getId().toString();
+            } else {
+                friendStatus = FriendStatus.NONE;
+            }
+
+            return new UserSearchResultDto(
+                    user.getId().toString(),
+                    user.getDisplayName(),
+                    friendStatus,
+                    requestId
+            );
+        });
     }
 
     // ----------------------------------------------------------------

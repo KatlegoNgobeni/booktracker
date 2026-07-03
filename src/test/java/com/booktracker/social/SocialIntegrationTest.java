@@ -454,24 +454,37 @@ class SocialIntegrationTest {
     // ----------------------------------------------------------------
 
     /**
-     * SOCIAL-03: GET /api/feed returns 200 with READ entries from followed users.
+     * SOCIAL-03 + D-03: GET /api/feed returns 200 with READ entries from accepted friends.
+     *
+     * <p>Phase 9 switches the feed from follows to mutual friends (D-03). This test
+     * establishes a friend relationship (send + accept) and verifies the friend's READ book
+     * appears in the feed.
      */
     @Test
     @SuppressWarnings("unchecked")
     void feedShowsFolloweeBooks() {
-        UserInfo followee = registerUser("feedfollowee");
+        UserInfo friend = registerUser("feedfriend");
 
-        // Seed a READ entry for followee
-        seedReadEntry(followee.userId, LocalDate.now().minusDays(3));
+        // Seed a READ entry for the friend
+        seedReadEntry(friend.userId, LocalDate.now().minusDays(3));
 
-        // Current user follows followee
-        restTemplate.exchange(
-            "/api/users/" + followee.userId + "/follow",
+        // Current user sends a friend request; friend accepts (D-03 mutual friendship)
+        Map<String, Object> reqBody = Map.of("recipientId", friend.userId);
+        ResponseEntity<Map> sendResp = restTemplate.exchange(
+            "/api/friend-requests",
             HttpMethod.POST,
-            new HttpEntity<>(bearerHeaders()),
+            new HttpEntity<>(reqBody, bearerHeaders()),
+            Map.class);
+        assertThat(sendResp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String requestId = sendResp.getBody().get("id").toString();
+
+        restTemplate.exchange(
+            "/api/friend-requests/" + requestId + "/accept",
+            HttpMethod.PUT,
+            new HttpEntity<>(bearerHeadersFor(friend.token)),
             Map.class);
 
-        // Fetch feed
+        // Fetch feed — should show the friend's READ book
         ResponseEntity<Map> response = restTemplate.exchange(
             "/api/feed",
             HttpMethod.GET,
@@ -487,12 +500,13 @@ class SocialIntegrationTest {
         // Verify the feed item has expected fields
         Map<?, ?> item = (Map<?, ?>) content.get(0);
         assertThat(item.get("bookTitle")).isNotNull();
-        assertThat(item.get("userId")).isEqualTo(followee.userId);
+        assertThat(item.get("userId")).isEqualTo(friend.userId);
         assertThat(item.get("entryId")).isNotNull();
     }
 
     /**
-     * SOCIAL-03: GET /api/feed returns empty content when the current user follows nobody.
+     * SOCIAL-03 + D-03: GET /api/feed returns empty content when the current user has
+     * no accepted friends (feed is now friends-based, not follows-based).
      */
     @Test
     @SuppressWarnings("unchecked")
@@ -511,32 +525,37 @@ class SocialIntegrationTest {
     }
 
     /**
-     * SOCIAL-03: GET /api/feed returns entries ordered by dateFinished DESC
-     * (most recently finished first).
+     * SOCIAL-03 + D-03: GET /api/feed returns entries ordered by dateFinished DESC
+     * (most recently finished first) — using accepted friends, not follows.
      */
     @Test
     @SuppressWarnings("unchecked")
     void feedOrderedByDateDesc() {
-        UserInfo followeeA = registerUser("feedorderfolloweeA");
-        UserInfo followeeB = registerUser("feedorderfolloweeB");
+        UserInfo friendA = registerUser("feedorderfriendA");
+        UserInfo friendB = registerUser("feedorderfriendB");
 
         // Seed entries with known dates — older entry first in DB, newer second
         LocalDate olderDate = LocalDate.now().minusDays(10);
         LocalDate newerDate = LocalDate.now().minusDays(2);
-        seedReadEntry(followeeA.userId, olderDate);
-        seedReadEntry(followeeB.userId, newerDate);
+        seedReadEntry(friendA.userId, olderDate);
+        seedReadEntry(friendB.userId, newerDate);
 
-        // Follow both users
-        restTemplate.exchange(
-            "/api/users/" + followeeA.userId + "/follow",
-            HttpMethod.POST,
-            new HttpEntity<>(bearerHeaders()),
-            Map.class);
-        restTemplate.exchange(
-            "/api/users/" + followeeB.userId + "/follow",
-            HttpMethod.POST,
-            new HttpEntity<>(bearerHeaders()),
-            Map.class);
+        // Establish accepted friendships with both (D-03 — mutual friendship required for feed)
+        Map<String, Object> reqBodyA = Map.of("recipientId", friendA.userId);
+        ResponseEntity<Map> sendA = restTemplate.exchange(
+            "/api/friend-requests", HttpMethod.POST,
+            new HttpEntity<>(reqBodyA, bearerHeaders()), Map.class);
+        String requestIdA = sendA.getBody().get("id").toString();
+        restTemplate.exchange("/api/friend-requests/" + requestIdA + "/accept",
+            HttpMethod.PUT, new HttpEntity<>(bearerHeadersFor(friendA.token)), Map.class);
+
+        Map<String, Object> reqBodyB = Map.of("recipientId", friendB.userId);
+        ResponseEntity<Map> sendB = restTemplate.exchange(
+            "/api/friend-requests", HttpMethod.POST,
+            new HttpEntity<>(reqBodyB, bearerHeaders()), Map.class);
+        String requestIdB = sendB.getBody().get("id").toString();
+        restTemplate.exchange("/api/friend-requests/" + requestIdB + "/accept",
+            HttpMethod.PUT, new HttpEntity<>(bearerHeadersFor(friendB.token)), Map.class);
 
         // Fetch feed
         ResponseEntity<Map> response = restTemplate.exchange(

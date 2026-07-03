@@ -54,15 +54,18 @@ public class SocialService {
     private final UserRepository userRepository;
     private final ShelfRepository shelfRepository;
     private final GoalRepository goalRepository;
+    private final FriendRequestRepository friendRequestRepository;
 
     public SocialService(FollowRepository followRepository,
                          UserRepository userRepository,
                          ShelfRepository shelfRepository,
-                         GoalRepository goalRepository) {
+                         GoalRepository goalRepository,
+                         FriendRequestRepository friendRequestRepository) {
         this.followRepository = followRepository;
         this.userRepository = userRepository;
         this.shelfRepository = shelfRepository;
         this.goalRepository = goalRepository;
+        this.friendRequestRepository = friendRequestRepository;
     }
 
     /**
@@ -201,20 +204,25 @@ public class SocialService {
 
     /**
      * Get the activity feed for the authenticated user — a paginated list of READ shelf
-     * entries from users the current user follows, ordered by dateFinished DESC.
+     * entries from accepted friends in either direction, ordered by dateFinished DESC.
+     *
+     * <p><strong>D-03 — Feed switches to mutual friends:</strong>
+     * The feed now queries {@code friend_requests} (ACCEPTED, bidirectional) instead of
+     * {@code follows}. "People I'm friends with" means ACCEPTED rows where the current user
+     * is either the requester or the recipient.
      *
      * <p>Feed is scoped to {@code currentUser.getId()} from JWT — no userId from HTTP (T-08-02).
-     * The V2 composite index on {@code user_books(user_id, shelf_status, date_finished DESC)}
-     * ensures efficient ordering.
      *
      * @param pageable    page/size for the feed
      * @param currentUser the authenticated user (from @AuthenticationPrincipal — T-08-02)
-     * @return paginated {@link FeedItemDto} list
+     * @return paginated {@link FeedItemDto} list from accepted friends
      */
     @Transactional(readOnly = true)
     public Page<FeedItemDto> getFeed(Pageable pageable, UserEntity currentUser) {
-        // T-08-02: Feed scoped to currentUser.getId() — never a userId from HTTP
-        Page<UserBookEntity> page = followRepository.findFeedForUser(currentUser.getId(), pageable);
+        // D-03: Feed scoped to accepted friends via FriendRequestRepository
+        // T-08-02: currentUser.getId() is from JWT — never from HTTP
+        Page<UserBookEntity> page = friendRequestRepository.findFeedForFriends(
+                currentUser.getId(), pageable);
         return page.map(this::toFeedItemDto);
     }
 
