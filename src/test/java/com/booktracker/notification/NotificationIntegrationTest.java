@@ -443,6 +443,222 @@ class NotificationIntegrationTest {
     }
 
     // ----------------------------------------------------------------
+    // NOTIF-01 trigger tests (Plan 09-04 — RED until triggers are wired)
+    // ----------------------------------------------------------------
+
+    /**
+     * NOTIF-01 trigger: POST /api/friend-requests → a notification row is persisted
+     * for the recipient with type FRIEND_REQUEST.
+     *
+     * <p>RED until FriendRequestService.sendRequest calls NotificationService.createNotification.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void notificationPersistedOnFriendRequest() {
+        // sender = current test user; recipient = recipientUser
+        UserInfo recipientUser = registerUser("frtriggerrecipient");
+
+        // Sender sends a friend request to recipient
+        Map<String, Object> sendBody = Map.of("recipientId", recipientUser.userId);
+        ResponseEntity<Map> sendResp = restTemplate.exchange(
+            "/api/friend-requests",
+            HttpMethod.POST,
+            new HttpEntity<>(sendBody, bearerHeaders()),
+            Map.class);
+        assertThat(sendResp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        // Recipient checks their notifications — must have FRIEND_REQUEST notification
+        ResponseEntity<Map> notifResp = restTemplate.exchange(
+            "/api/notifications",
+            HttpMethod.GET,
+            new HttpEntity<>(bearerHeadersFor(recipientUser.token)),
+            Map.class);
+        assertThat(notifResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        List<?> content = (List<?>) notifResp.getBody().get("content");
+        assertThat(content).isNotEmpty();
+
+        boolean hasFriendRequestNotif = content.stream().anyMatch(item -> {
+            Map<?, ?> m = (Map<?, ?>) item;
+            return "FRIEND_REQUEST".equals(m.get("type")) &&
+                   currentUserId.equals(m.get("actorId"));
+        });
+        assertThat(hasFriendRequestNotif)
+            .as("Recipient should have a FRIEND_REQUEST notification with sender as actor")
+            .isTrue();
+    }
+
+    /**
+     * NOTIF-01 trigger: PUT /api/friend-requests/{id}/accept → a notification row is persisted
+     * for the original requester with type FRIEND_ACCEPTED.
+     *
+     * <p>RED until FriendRequestService.acceptRequest calls NotificationService.createNotification.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void notificationPersistedOnFriendAccepted() {
+        // sender = current test user; recipient = acceptingUser
+        UserInfo acceptingUser = registerUser("frtriggeracceptor");
+
+        // Sender sends a friend request to the accepting user
+        Map<String, Object> sendBody = Map.of("recipientId", acceptingUser.userId);
+        ResponseEntity<Map> sendResp = restTemplate.exchange(
+            "/api/friend-requests",
+            HttpMethod.POST,
+            new HttpEntity<>(sendBody, bearerHeaders()),
+            Map.class);
+        assertThat(sendResp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        String requestId = sendResp.getBody().get("id").toString();
+
+        // Accepting user accepts the request
+        ResponseEntity<Map> acceptResp = restTemplate.exchange(
+            "/api/friend-requests/" + requestId + "/accept",
+            HttpMethod.PUT,
+            new HttpEntity<>(bearerHeadersFor(acceptingUser.token)),
+            Map.class);
+        assertThat(acceptResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // Original sender (current user) checks their notifications — must have FRIEND_ACCEPTED notification
+        ResponseEntity<Map> notifResp = restTemplate.exchange(
+            "/api/notifications",
+            HttpMethod.GET,
+            new HttpEntity<>(bearerHeaders()),
+            Map.class);
+        assertThat(notifResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        List<?> content = (List<?>) notifResp.getBody().get("content");
+        assertThat(content).isNotEmpty();
+
+        boolean hasFriendAcceptedNotif = content.stream().anyMatch(item -> {
+            Map<?, ?> m = (Map<?, ?>) item;
+            return "FRIEND_ACCEPTED".equals(m.get("type")) &&
+                   acceptingUser.userId.equals(m.get("actorId"));
+        });
+        assertThat(hasFriendAcceptedNotif)
+            .as("Original requester should have a FRIEND_ACCEPTED notification from the acceptor")
+            .isTrue();
+    }
+
+    /**
+     * NOTIF-01 trigger: POST /api/entries/{entryId}/like → a notification row is persisted
+     * for the entry owner with type REVIEW_LIKED.
+     *
+     * <p>RED until LikeService.likeReview calls NotificationService.createNotification.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void notificationPersistedOnReviewLiked() {
+        // entryOwner = current test user; liker = another user
+        UserInfo likerUser = registerUser("liketriggerliker");
+
+        // Seed a READ entry for the current user (the review that will be liked)
+        UserBookEntity entry = seedReadEntry(currentUserId);
+
+        // liker likes the entry owner's review
+        ResponseEntity<Void> likeResp = restTemplate.exchange(
+            "/api/entries/" + entry.getId() + "/like",
+            HttpMethod.POST,
+            new HttpEntity<>(bearerHeadersFor(likerUser.token)),
+            Void.class);
+        assertThat(likeResp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        // Entry owner (current user) checks their notifications — must have REVIEW_LIKED notification
+        ResponseEntity<Map> notifResp = restTemplate.exchange(
+            "/api/notifications",
+            HttpMethod.GET,
+            new HttpEntity<>(bearerHeaders()),
+            Map.class);
+        assertThat(notifResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        List<?> content = (List<?>) notifResp.getBody().get("content");
+        assertThat(content).isNotEmpty();
+
+        boolean hasReviewLikedNotif = content.stream().anyMatch(item -> {
+            Map<?, ?> m = (Map<?, ?>) item;
+            return "REVIEW_LIKED".equals(m.get("type")) &&
+                   likerUser.userId.equals(m.get("actorId"));
+        });
+        assertThat(hasReviewLikedNotif)
+            .as("Entry owner should have a REVIEW_LIKED notification with liker as actor")
+            .isTrue();
+    }
+
+    /**
+     * NOTIF-01 trigger: Mark a shelf entry READ (PATCH /api/entries/{entryId}/metadata) →
+     * a notification row is persisted for each accepted friend with type FRIEND_FINISHED_BOOK.
+     *
+     * <p>Setup: A and B are accepted friends. A marks a book READ. B should receive
+     * FRIEND_FINISHED_BOOK notification.
+     *
+     * <p>RED until ShelfService.updateMetadata calls NotificationService.createNotification
+     * on READ status transitions.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void notificationPersistedOnBookFinished() {
+        // friendUser = current test user; bookFinisher = another user
+        UserInfo bookFinisher = registerUser("finishertrigger");
+
+        // Establish friendship: bookFinisher sends request, current user accepts
+        Map<String, Object> sendBody = Map.of("recipientId", currentUserId);
+        ResponseEntity<Map> sendResp = restTemplate.exchange(
+            "/api/friend-requests",
+            HttpMethod.POST,
+            new HttpEntity<>(sendBody, bearerHeadersFor(bookFinisher.token)),
+            Map.class);
+        assertThat(sendResp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        String requestId = sendResp.getBody().get("id").toString();
+
+        // Current user accepts the request
+        ResponseEntity<Map> acceptResp = restTemplate.exchange(
+            "/api/friend-requests/" + requestId + "/accept",
+            HttpMethod.PUT,
+            new HttpEntity<>(bearerHeaders()),
+            Map.class);
+        assertThat(acceptResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // Seed a CURRENTLY_READING entry for bookFinisher (will be updated to READ)
+        BookEntity book = seedBook();
+        com.booktracker.user.UserEntity finisher = userRepository.findById(UUID.fromString(bookFinisher.userId))
+                .orElseThrow();
+        UserBookEntity readingEntry = new UserBookEntity();
+        readingEntry.setUser(finisher);
+        readingEntry.setBook(book);
+        readingEntry.setShelfStatus(ShelfStatus.CURRENTLY_READING);
+        readingEntry = shelfRepository.save(readingEntry);
+
+        // bookFinisher marks the entry READ via PATCH metadata
+        Map<String, Object> metaBody = Map.of("status", "READ");
+        ResponseEntity<Map> updateResp = restTemplate.exchange(
+            "/api/entries/" + readingEntry.getId() + "/metadata",
+            HttpMethod.PATCH,
+            new HttpEntity<>(metaBody, bearerHeadersFor(bookFinisher.token)),
+            Map.class);
+        assertThat(updateResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // Current user (the friend) checks their notifications — must have FRIEND_FINISHED_BOOK notification
+        ResponseEntity<Map> notifResp = restTemplate.exchange(
+            "/api/notifications",
+            HttpMethod.GET,
+            new HttpEntity<>(bearerHeaders()),
+            Map.class);
+        assertThat(notifResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        List<?> content = (List<?>) notifResp.getBody().get("content");
+        // Filter out FRIEND_ACCEPTED notification (generated in setUp) — look for FRIEND_FINISHED_BOOK
+        boolean hasFriendFinishedNotif = content.stream().anyMatch(item -> {
+            Map<?, ?> m = (Map<?, ?>) item;
+            return "FRIEND_FINISHED_BOOK".equals(m.get("type")) &&
+                   bookFinisher.userId.equals(m.get("actorId"));
+        });
+        assertThat(hasFriendFinishedNotif)
+            .as("Friend of the book-finisher should have a FRIEND_FINISHED_BOOK notification")
+            .isTrue();
+    }
+
+    // ----------------------------------------------------------------
     // Private helper record
     // ----------------------------------------------------------------
 
