@@ -121,6 +121,8 @@ export interface PublicShelfEntry {
   rating: number | null;     // 1–5 or null
   review: string | null;
   dateFinished: string | null; // ISO date YYYY-MM-DD
+  likeCount: number;           // total likes on this entry (DISC-04)
+  likedByMe: boolean;          // whether the authenticated viewer has liked this entry (DISC-04)
 }
 
 // Derived from PublicProfileDto.java (@JsonInclude(NON_NULL) — optional fields absent when null)
@@ -154,4 +156,33 @@ export interface FeedItem {
 // Derived from FollowStatusDto.java
 export interface FollowStatus {
   following: boolean;
+}
+
+// ────────────────────────────────────────────────────────
+// Discovery & friend-request types (Phase 9 — DISC-01/02/03/04)
+// Derived from: FriendStatus.java, FriendRequestDto.java, UserSearchResultDto.java
+// ────────────────────────────────────────────────────────
+
+// Derived from FriendStatus.java enum
+// Drives the 4-state FriendRequestButton (D-06)
+export type FriendStatus = 'NONE' | 'PENDING_SENT' | 'PENDING_RECEIVED' | 'ACCEPTED';
+
+// Derived from FriendRequestDto.java
+// Returned by POST/PUT /friend-requests and GET /friend-requests/pending-received
+export interface FriendRequest {
+  id: string;
+  requesterId: string;
+  recipientId: string;
+  requesterDisplayName: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
+  createdAt: string; // ISO OffsetDateTime
+}
+
+// Derived from UserSearchResultDto.java
+// Returned in Page<UserSearchResultDto> by GET /api/users/search?q=
+export interface UserSearchResult {
+  id: string;
+  displayName: string;
+  friendStatus: FriendStatus;
+  requestId?: string; // present when PENDING_SENT or PENDING_RECEIVED
 }

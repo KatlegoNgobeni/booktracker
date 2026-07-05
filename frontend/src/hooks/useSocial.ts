@@ -22,7 +22,14 @@ import {
 } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { QUERY_KEYS } from '../lib/queryKeys';
-import type { Page, FeedItem, PublicProfile, FollowStatus } from '../types/api.types';
+import type {
+  Page,
+  FeedItem,
+  PublicProfile,
+  FollowStatus,
+  FriendRequest,
+  UserSearchResult,
+} from '../types/api.types';
 
 // ────────────────────────────────────────────────────────
 // SOCIAL-03: Activity feed (infinite scroll, Spring Page shape)
@@ -123,6 +130,159 @@ export function useUnfollowUser(userId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile(userId) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed() });
+    },
+  });
+}
+
+// ────────────────────────────────────────────────────────
+// DISC-01: User search (people tab)
+// ────────────────────────────────────────────────────────
+
+/**
+ * useUserSearch — query for GET /api/users/search?q=
+ *
+ * Returns Page<UserSearchResult> (sorted by displayName ASC, excludes self).
+ * enabled: !!query prevents firing with an empty string.
+ *
+ * T-09-04: query param is JPQL bind-parameter on the backend — no injection risk.
+ */
+export function useUserSearch(query: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.userSearch(query),
+    queryFn: () =>
+      api
+        .get<Page<UserSearchResult>>('/users/search', { params: { q: query } })
+        .then((r) => r.data),
+    enabled: !!query,
+  });
+}
+
+// ────────────────────────────────────────────────────────
+// DISC-02/03: Friend request mutations
+// ────────────────────────────────────────────────────────
+
+/**
+ * useSendFriendRequest — mutation for POST /api/friend-requests
+ *
+ * T-09-17: Actor identity comes from the JWT interceptor — request body only carries recipientId.
+ * onSuccess: invalidates userSearch (friendStatus updated) and feed key prefix.
+ */
+export function useSendFriendRequest(userId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api
+        .post<FriendRequest>('/friend-requests', { recipientId: userId })
+        .then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userSearch'] });
+    },
+  });
+}
+
+/**
+ * useAcceptFriendRequest — mutation for PUT /api/friend-requests/{requestId}/accept
+ *
+ * onSuccess: invalidates pendingReceived (item removed), userSearch (status updated), and feed
+ *            (newly accepted friend's finishes appear in feed).
+ */
+export function useAcceptFriendRequest(requestId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api
+        .put<FriendRequest>(`/friend-requests/${requestId}/accept`)
+        .then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.pendingReceived() });
+      queryClient.invalidateQueries({ queryKey: ['userSearch'] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed() });
+    },
+  });
+}
+
+/**
+ * useRejectFriendRequest — mutation for PUT /api/friend-requests/{requestId}/reject
+ *
+ * onSuccess: invalidates pendingReceived (item removed) and userSearch (status updated).
+ */
+export function useRejectFriendRequest(requestId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api
+        .put<FriendRequest>(`/friend-requests/${requestId}/reject`)
+        .then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.pendingReceived() });
+      queryClient.invalidateQueries({ queryKey: ['userSearch'] });
+    },
+  });
+}
+
+/**
+ * useCancelFriendRequest — mutation for DELETE /api/friend-requests/{requestId}
+ *
+ * Cancels an outgoing PENDING request (requester's action — deletes the row).
+ * onSuccess: invalidates userSearch so the friend status reverts to NONE.
+ */
+export function useCancelFriendRequest(requestId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete(`/friend-requests/${requestId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userSearch'] });
+    },
+  });
+}
+
+/**
+ * usePendingReceivedRequests — query for GET /api/friend-requests/pending-received
+ *
+ * Returns FriendRequest[] (PENDING status, ordered by createdAt DESC).
+ * Used by PendingRequestsWidget on FeedPage (DISC-03, D-09).
+ */
+export function usePendingReceivedRequests() {
+  return useQuery({
+    queryKey: QUERY_KEYS.pendingReceived(),
+    queryFn: () =>
+      api
+        .get<FriendRequest[]>('/friend-requests/pending-received')
+        .then((r) => r.data),
+  });
+}
+
+// ────────────────────────────────────────────────────────
+// DISC-04: Review like / unlike mutations
+// ────────────────────────────────────────────────────────
+
+/**
+ * useLikeReview — mutation for POST /api/entries/{entryId}/like
+ *
+ * T-09-17: Liker identity comes from JWT — entryId is path, no userId in body.
+ * onSuccess: invalidates the profile query so likeCount + likedByMe update.
+ */
+export function useLikeReview(entryId: string, profileUserId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post(`/entries/${entryId}/like`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile(profileUserId) });
+    },
+  });
+}
+
+/**
+ * useUnlikeReview — mutation for DELETE /api/entries/{entryId}/like
+ *
+ * onSuccess: invalidates the profile query so likeCount + likedByMe update.
+ */
+export function useUnlikeReview(entryId: string, profileUserId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete(`/entries/${entryId}/like`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile(profileUserId) });
     },
   });
 }

@@ -23,4 +23,7 @@ export const QUERY_KEYS = {
     page !== undefined ? ['feed', page] : ['feed'],
   profile: (userId: string, page?: number): readonly (string | number)[] =>
     page !== undefined ? ['profile', userId, page] : ['profile', userId],
+  // Discovery & friend-request keys (Phase 9 — DISC-01/02/03)
+  userSearch: (q: string): readonly string[] => ['userSearch', q],
+  pendingReceived: (): readonly string[] => ['pendingReceived'],
 } as const;
