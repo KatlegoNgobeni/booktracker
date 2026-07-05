@@ -62,13 +62,23 @@ export function useWebSocket(
         // Subscribe to the user-specific notification queue.
         // Spring routes /user/{uuid}/queue/notifications → this subscription.
         client.subscribe('/user/queue/notifications', (msg) => {
+          // Separate try/catch scopes: only swallow malformed-payload errors here;
+          // callback errors propagate normally so bugs in handleNotification are visible.
+          let notif: NotificationDto;
           try {
-            const notif: NotificationDto = JSON.parse(msg.body);
-            onNotificationRef.current(notif);
+            notif = JSON.parse(msg.body) as NotificationDto;
           } catch {
             // Malformed payload — ignore silently.
+            return;
           }
+          onNotificationRef.current(notif);
         });
+      },
+      // Stop the auto-reconnect loop when the server rejects our STOMP CONNECT
+      // (e.g. JWT expired). Without this, @stomp/stompjs retries every reconnectDelay
+      // milliseconds indefinitely with the same stale token, hammering the server.
+      onStompError: () => {
+        client.deactivate();
       },
     });
 
