@@ -53,11 +53,13 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': { target: 'http://localhost:8080', changeOrigin: true },
+      '/ws': { target: 'http://localhost:8080', changeOrigin: true, ws: true },
     },
   },
   preview: {
     proxy: {
       '/api': { target: 'http://localhost:8080', changeOrigin: true },
+      '/ws': { target: 'http://localhost:8080', changeOrigin: true, ws: true },
     },
   },
   test: {

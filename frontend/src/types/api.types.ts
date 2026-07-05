@@ -186,3 +186,26 @@ export interface UserSearchResult {
   friendStatus: FriendStatus;
   requestId?: string; // present when PENDING_SENT or PENDING_RECEIVED
 }
+
+// ────────────────────────────────────────────────────────
+// Notification types (Phase 9 — NOTIF-01/02/03)
+// Derived from: NotificationType.java enum, NotificationDto.java
+// ────────────────────────────────────────────────────────
+
+// Derived from NotificationType.java enum
+export type NotificationType =
+  | 'FRIEND_REQUEST'
+  | 'FRIEND_ACCEPTED'
+  | 'FRIEND_FINISHED_BOOK'
+  | 'REVIEW_LIKED';
+
+// Derived from NotificationDto.java
+export interface NotificationDto {
+  id: string;
+  type: NotificationType;
+  actorId: string;
+  actorDisplayName: string;
+  entityId: string | null; // entryId for FRIEND_FINISHED_BOOK / REVIEW_LIKED; null for friend events
+  isRead: boolean;
+  createdAt: string; // ISO OffsetDateTime
+}
