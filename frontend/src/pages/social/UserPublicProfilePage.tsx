@@ -14,10 +14,12 @@
  */
 import { useParams } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import { usePublicProfile, useCurrentUserId } from '../../hooks/useSocial';
+import { Heart } from 'lucide-react';
+import { usePublicProfile, useCurrentUserId, useLikeReview, useUnlikeReview } from '../../hooks/useSocial';
 import { FollowButton } from '../../components/shared/FollowButton';
 import { BookCoverImage } from '../../components/shared/BookCoverImage';
 import { StarRating } from '../../components/shared/StarRating';
+import { cn } from '../../lib/utils';
 import type { PublicShelfEntry } from '../../types/api.types';
 
 // ────────────────────────────────────────────────────────
@@ -80,7 +82,26 @@ function ProfileHeader({
   );
 }
 
-function ReadBookCard({ entry }: { entry: PublicShelfEntry }) {
+function ReadBookCard({
+  entry,
+  profileUserId,
+}: {
+  entry: PublicShelfEntry;
+  profileUserId: string;
+}) {
+  const liked = entry.likedByMe;
+  const likeMutation = useLikeReview(entry.entryId, profileUserId);
+  const unlikeMutation = useUnlikeReview(entry.entryId, profileUserId);
+  const isPending = likeMutation.isPending || unlikeMutation.isPending;
+
+  function handleToggle() {
+    if (liked) {
+      unlikeMutation.mutate();
+    } else {
+      likeMutation.mutate();
+    }
+  }
+
   return (
     <div className="flex flex-col gap-1">
       <Link to={`/books/${entry.olKey}`}>
@@ -95,7 +116,28 @@ function ReadBookCard({ entry }: { entry: PublicShelfEntry }) {
         <StarRating value={entry.rating} readOnly />
       )}
       {entry.review && (
-        <p className="text-xs text-muted-foreground line-clamp-2">{entry.review}</p>
+        <>
+          {/* T-09-16: review text via JSX — no dangerouslySetInnerHTML */}
+          <p className="text-xs text-muted-foreground line-clamp-2">{entry.review}</p>
+          {/* Like button — only shown when entry has a review (DISC-04) */}
+          <button
+            aria-label={liked ? 'Unlike review' : 'Like review'}
+            aria-pressed={liked}
+            className="flex items-center gap-1 text-xs text-muted-foreground
+                       hover:text-foreground transition-colors disabled:opacity-50"
+            disabled={isPending}
+            onClick={handleToggle}
+          >
+            <Heart
+              className={cn(
+                'h-4 w-4',
+                liked ? 'fill-current text-destructive' : 'text-muted-foreground',
+              )}
+              aria-hidden="true"
+            />
+            <span>{entry.likeCount}</span>
+          </button>
+        </>
       )}
     </div>
   );
@@ -161,7 +203,7 @@ export function UserPublicProfilePage() {
         ) : (
           <div className="grid grid-cols-3 gap-3">
             {readEntries.map((entry) => (
-              <ReadBookCard key={entry.entryId} entry={entry} />
+              <ReadBookCard key={entry.entryId} entry={entry} profileUserId={profile.userId} />
             ))}
           </div>
         )}

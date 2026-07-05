@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { BookCoverImage } from '../../components/shared/BookCoverImage';
 import { StarRating } from '../../components/shared/StarRating';
+import { PendingRequestsWidget } from '../../components/social/PendingRequestsWidget';
 import { useFeed } from '../../hooks/useSocial';
 import { formatRelativeDate } from '../../lib/utils';
 import type { FeedItem } from '../../types/api.types';
@@ -136,6 +137,8 @@ export function FeedPage() {
 
   return (
     <div className="px-4 pt-4 pb-4">
+      {/* D-10: hidden when no pending requests; returns null when empty */}
+      <PendingRequestsWidget />
       <h1 className="text-xl font-semibold mb-3">Feed</h1>
 
       <div className="flex flex-col">
