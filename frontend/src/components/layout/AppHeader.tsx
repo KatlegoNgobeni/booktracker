@@ -29,22 +29,30 @@ export function AppHeader() {
   const token = localStorage.getItem(TOKEN_KEY);
   const queryClient = useQueryClient();
   const { data: unreadCount = 0 } = useUnreadCount();
-  const { mutate: markAllRead } = useMarkAllRead();
+  const { mutate: markAllRead, isPending: markAllReadPending } = useMarkAllRead();
 
   /**
    * Called by useWebSocket for each pushed notification (NOTIF-02).
-   * Invalidates the unread-count and notifications query keys so:
-   *   1. The badge number updates immediately without a full page refresh.
-   *   2. If the inbox is already open, the list refreshes automatically.
+   * Always invalidates the unread-count badge. When the sheet is already open,
+   * uses refetchQueries (not invalidateQueries) to force an immediate reload of
+   * the inbox list — invalidateQueries is a no-op on a disabled query (finding 1).
    * T-09-21: payload is typed — no dangerouslySetInnerHTML anywhere in this chain.
    */
   const handleNotification = (_notif: NotificationDto) => {
     queryClient.invalidateQueries({
       queryKey: QUERY_KEYS.notificationsUnreadCount(),
     });
-    queryClient.invalidateQueries({
-      queryKey: QUERY_KEYS.notifications(),
-    });
+    if (open) {
+      // Sheet is open: force an immediate reload so the new item appears in the list.
+      queryClient.refetchQueries({
+        queryKey: QUERY_KEYS.notifications(),
+      });
+    } else {
+      // Sheet is closed: mark stale so it reloads when next opened.
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.notifications(),
+      });
+    }
   };
 
   // Mount the STOMP/SockJS connection at AppHeader level (inside AppLayout) so the
@@ -72,6 +80,7 @@ export function AppHeader() {
         <button
           aria-label="Notifications"
           className="relative flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+          disabled={markAllReadPending}
           onClick={handleBellClick}
         >
           <Bell className="h-5 w-5" aria-hidden="true" />
