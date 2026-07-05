@@ -20,8 +20,7 @@
  * Security notes:
  * - T-09-21: All user-provided strings rendered via JSX text interpolation only — no dangerouslySetInnerHTML.
  */
-import { useEffect } from 'react';
-import { Bell, UserPlus, UserCheck, BookOpen, Heart } from 'lucide-react';
+import { Bell, Loader2, UserPlus, UserCheck, BookOpen, Heart } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -67,14 +66,12 @@ interface NotificationSheetProps {
 }
 
 export function NotificationSheet({ open, onOpenChange }: NotificationSheetProps) {
-  const { data: notifications = [], refetch } = useNotifications();
+  const { data: notifications = [], isFetching, error, refetch } = useNotifications();
 
-  // Refetch the notification list each time the sheet opens (lazy query — enabled: false).
-  useEffect(() => {
-    if (open) {
-      refetch();
-    }
-  }, [open, refetch]);
+  // No useEffect refetch here — markAllRead.onSuccess in AppHeader triggers refetchQueries
+  // so the GET fires only after the POST completes (avoids the GET/POST race where the inbox
+  // would briefly show isRead:false items). handleNotification also calls refetchQueries
+  // directly when the sheet is open (finding 1 / finding 9).
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -84,7 +81,23 @@ export function NotificationSheet({ open, onOpenChange }: NotificationSheetProps
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto">
-          {notifications.length === 0 ? (
+          {isFetching && notifications.length === 0 ? (
+            /* Loading state — shown on first open while the GET is in flight */
+            <div className="flex items-center justify-center py-8 px-4">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-label="Loading notifications" />
+            </div>
+          ) : error && notifications.length === 0 ? (
+            /* Error state — shown when the fetch failed and there is no cached data */
+            <div className="flex flex-col items-center justify-center py-8 px-4 gap-2">
+              <p className="text-sm text-muted-foreground text-center">Could not load notifications.</p>
+              <button
+                onClick={() => refetch()}
+                className="text-xs text-primary underline"
+              >
+                Retry
+              </button>
+            </div>
+          ) : notifications.length === 0 ? (
             /* Empty state (UI-SPEC section 2) */
             <div className="flex items-center justify-center py-8 px-4">
               <p className="text-sm text-muted-foreground text-center">No notifications yet.</p>
