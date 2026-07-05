@@ -21,7 +21,7 @@
  * - T-09-21: All user-provided strings rendered via JSX text interpolation only — no dangerouslySetInnerHTML.
  */
 import { useEffect } from 'react';
-import { UserPlus, UserCheck, BookOpen, Heart } from 'lucide-react';
+import { Bell, UserPlus, UserCheck, BookOpen, Heart } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -91,7 +91,7 @@ export function NotificationSheet({ open, onOpenChange }: NotificationSheetProps
             </div>
           ) : (
             notifications.map((notif) => {
-              const Icon = TYPE_ICON[notif.type];
+              const Icon = TYPE_ICON[notif.type] ?? Bell;
               return (
                 <div
                   key={notif.id}
