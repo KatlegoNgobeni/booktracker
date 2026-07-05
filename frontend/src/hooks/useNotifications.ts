@@ -68,9 +68,16 @@ export function useMarkAllRead() {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.notificationsUnreadCount(),
       });
-      queryClient.invalidateQueries({
+      // Use refetchQueries (not invalidateQueries) so the inbox list reloads
+      // immediately and correctly reflects isRead:true. invalidateQueries alone
+      // is a no-op for the disabled notifications query (finding 1 / finding 9).
+      queryClient.refetchQueries({
         queryKey: QUERY_KEYS.notifications(),
       });
+    },
+    onError: (err) => {
+      // Surface mutation failures so they are visible in dev tools and not silently dropped.
+      console.error('[useMarkAllRead] POST /notifications/read-all failed:', err);
     },
   });
 }
