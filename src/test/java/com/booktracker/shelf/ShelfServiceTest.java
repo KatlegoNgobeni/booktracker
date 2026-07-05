@@ -3,6 +3,8 @@ package com.booktracker.shelf;
 import com.booktracker.books.BookEntity;
 import com.booktracker.books.BookRepository;
 import com.booktracker.books.BookService;
+import com.booktracker.notification.NotificationService;
+import com.booktracker.social.FriendRequestRepository;
 import com.booktracker.user.UserEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +41,22 @@ class ShelfServiceTest {
 
     @Mock
     private BookRepository bookRepository;
+
+    /**
+     * Plan 09-04: ShelfService now requires FriendRequestRepository for the
+     * FRIEND_FINISHED_BOOK notification fan-out in updateMetadata.
+     * Mock provided so @InjectMocks wires the new constructor parameter.
+     */
+    @Mock
+    private FriendRequestRepository friendRequestRepository;
+
+    /**
+     * Plan 09-04: ShelfService now requires NotificationService for the
+     * FRIEND_FINISHED_BOOK trigger in updateMetadata.
+     * Mock provided so @InjectMocks wires the new constructor parameter.
+     */
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private ShelfService shelfService;
