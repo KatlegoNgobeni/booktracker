@@ -22,6 +22,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -171,6 +173,138 @@ class ShelfServiceTest {
         shelfService.updateMetadata(entryId, req, user);
 
         assertThat(entry.getDateFinished()).isNull();
+    }
+
+    // ----------------------------------------------------------------
+    // D-14 / D-15: ABANDONED auto-date behaviors (Plan 10-02)
+    // ----------------------------------------------------------------
+
+    /**
+     * D-14: Entry WANT_TO_READ with dateFinished=null → ABANDONED.
+     * Expected: dateFinished is set to today ("Date Stopped").
+     */
+    @Test
+    void updateToAbandonedSetsDateFinished() {
+        UserBookEntity entry = buildEntry(ShelfStatus.WANT_TO_READ);
+        entry.setDateFinished(null);
+
+        when(shelfRepository.findById(entryId)).thenReturn(Optional.of(entry));
+        when(shelfRepository.save(any(UserBookEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateShelfRequest req = new UpdateShelfRequest();
+        req.setStatus(ShelfStatus.ABANDONED);
+
+        shelfService.updateMetadata(entryId, req, user);
+
+        assertThat(entry.getDateFinished()).isEqualTo(LocalDate.now());
+    }
+
+    /**
+     * D-12 + D-14 ordering: Entry READ (with past dateFinished) → ABANDONED.
+     * D-15 clear rule runs first (clears dateFinished), then D-14 set rule fires.
+     * Expected: dateFinished == today (not null, not the old past date).
+     */
+    @Test
+    void readToAbandonedSetsDateFinished() {
+        LocalDate pastDate = LocalDate.of(2026, 1, 10);
+        UserBookEntity entry = buildEntry(ShelfStatus.READ);
+        entry.setDateFinished(pastDate);
+
+        when(shelfRepository.findById(entryId)).thenReturn(Optional.of(entry));
+        when(shelfRepository.save(any(UserBookEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateShelfRequest req = new UpdateShelfRequest();
+        req.setStatus(ShelfStatus.ABANDONED);
+
+        shelfService.updateMetadata(entryId, req, user);
+
+        assertThat(entry.getDateFinished()).isEqualTo(LocalDate.now());
+    }
+
+    /**
+     * D-15: Entry ABANDONED (with dateFinished + dateStarted) → WANT_TO_READ.
+     * Expected: dateFinished is cleared (null); dateStarted is preserved unchanged.
+     */
+    @Test
+    void abandonedToWantToReadClearsDate() {
+        LocalDate startDate = LocalDate.of(2026, 2, 1);
+        LocalDate stopDate = LocalDate.of(2026, 3, 15);
+        UserBookEntity entry = buildEntry(ShelfStatus.ABANDONED);
+        entry.setDateStarted(startDate);
+        entry.setDateFinished(stopDate);
+
+        when(shelfRepository.findById(entryId)).thenReturn(Optional.of(entry));
+        when(shelfRepository.save(any(UserBookEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateShelfRequest req = new UpdateShelfRequest();
+        req.setStatus(ShelfStatus.WANT_TO_READ);
+
+        shelfService.updateMetadata(entryId, req, user);
+
+        assertThat(entry.getDateFinished()).isNull();
+        assertThat(entry.getDateStarted()).isEqualTo(startDate);
+    }
+
+    /**
+     * D-15: Entry ABANDONED (with dateFinished) → CURRENTLY_READING.
+     * Expected: dateFinished is cleared (null).
+     */
+    @Test
+    void abandonedToCurrentlyReadingClearsDate() {
+        UserBookEntity entry = buildEntry(ShelfStatus.ABANDONED);
+        entry.setDateFinished(LocalDate.of(2026, 3, 15));
+
+        when(shelfRepository.findById(entryId)).thenReturn(Optional.of(entry));
+        when(shelfRepository.save(any(UserBookEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateShelfRequest req = new UpdateShelfRequest();
+        req.setStatus(ShelfStatus.CURRENTLY_READING);
+
+        shelfService.updateMetadata(entryId, req, user);
+
+        assertThat(entry.getDateFinished()).isNull();
+    }
+
+    /**
+     * SHELF-05: Entry CURRENTLY_READING → ABANDONED must NOT trigger FRIEND_FINISHED_BOOK.
+     * Expected: notificationService.createNotification never called;
+     *           friendRequestRepository.findAcceptedRelationships never invoked.
+     */
+    @Test
+    void updateToAbandonedNoNotification() {
+        UserBookEntity entry = buildEntry(ShelfStatus.CURRENTLY_READING);
+
+        when(shelfRepository.findById(entryId)).thenReturn(Optional.of(entry));
+        when(shelfRepository.save(any(UserBookEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateShelfRequest req = new UpdateShelfRequest();
+        req.setStatus(ShelfStatus.ABANDONED);
+
+        shelfService.updateMetadata(entryId, req, user);
+
+        verify(notificationService, never()).createNotification(any(), any(), any(), any());
+        verify(friendRequestRepository, never()).findAcceptedRelationships(any());
+    }
+
+    /**
+     * D-14 (preserve): Entry WANT_TO_READ with dateFinished already set → ABANDONED.
+     * Expected: dateFinished is NOT overwritten (only-if-null semantics, mirrors D-10 preserve).
+     */
+    @Test
+    void abandonedPreservesManualDateFinished() {
+        LocalDate manualDate = LocalDate.of(2026, 4, 20);
+        UserBookEntity entry = buildEntry(ShelfStatus.WANT_TO_READ);
+        entry.setDateFinished(manualDate);
+
+        when(shelfRepository.findById(entryId)).thenReturn(Optional.of(entry));
+        when(shelfRepository.save(any(UserBookEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateShelfRequest req = new UpdateShelfRequest();
+        req.setStatus(ShelfStatus.ABANDONED);
+
+        shelfService.updateMetadata(entryId, req, user);
+
+        assertThat(entry.getDateFinished()).isEqualTo(manualDate);
     }
 
     // ----------------------------------------------------------------
