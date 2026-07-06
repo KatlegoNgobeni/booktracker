@@ -186,6 +186,10 @@ function ShelfEmptyState({ status }: { status: ShelfStatus }) {
       heading: 'No books finished yet',
       body: 'Finish a book to see your stats and leave a review.',
     },
+    ABANDONED: {
+      heading: 'No abandoned books',
+      body: 'Books you stopped reading will appear here.',
+    },
   };
 
   return (
@@ -216,6 +220,9 @@ export function ShelfPage() {
           <TabsTrigger value="READ" className="flex-1">
             Read
           </TabsTrigger>
+          <TabsTrigger value="ABANDONED" className="flex-1">
+            DNF
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="WANT_TO_READ">
@@ -226,6 +233,9 @@ export function ShelfPage() {
         </TabsContent>
         <TabsContent value="READ">
           <ShelfTabPanel status="READ" />
+        </TabsContent>
+        <TabsContent value="ABANDONED">
+          <ShelfTabPanel status="ABANDONED" />
         </TabsContent>
       </Tabs>
     </div>
