@@ -9,10 +9,12 @@ package com.booktracker.shelf;
  * <p><strong>Convention:</strong> Stored as VARCHAR via {@code @Enumerated(EnumType.STRING)}
  * — never as an ordinal integer (CLAUDE.md constraint).
  *
- * <p>DNF (Did Not Finish) is deferred to v2 per project decision (STATE.md Deferred Items).
+ * <p>{@code ABANDONED} represents Did Not Finish (DNF) and is stored as the string
+ * {@code "ABANDONED"} via {@code @Enumerated(EnumType.STRING)} on the {@code UserBookEntity} field.
  */
 public enum ShelfStatus {
     WANT_TO_READ,
     CURRENTLY_READING,
-    READ
+    READ,
+    ABANDONED
 }
