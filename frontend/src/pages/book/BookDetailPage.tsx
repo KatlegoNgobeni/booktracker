@@ -22,9 +22,10 @@ const STATUS_LABELS: Record<ShelfStatus, string> = {
   WANT_TO_READ: 'Want to Read',
   CURRENTLY_READING: 'Currently Reading',
   READ: 'Read',
+  ABANDONED: 'Did Not Finish',
 };
 
-const ADD_STATUSES: ShelfStatus[] = ['WANT_TO_READ', 'CURRENTLY_READING', 'READ'];
+const ADD_STATUSES: ShelfStatus[] = ['WANT_TO_READ', 'CURRENTLY_READING', 'READ', 'ABANDONED'];
 
 export function BookDetailPage() {
   const { olKey: encodedOlKey } = useParams<{ olKey: string }>();

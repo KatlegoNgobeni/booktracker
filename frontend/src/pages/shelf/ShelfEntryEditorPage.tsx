@@ -48,7 +48,7 @@ import type { ShelfStatus } from '../../types/api.types';
 // ────────────────────────────────────────────────────────
 
 const shelfEditSchema = z.object({
-  status: z.enum(['WANT_TO_READ', 'CURRENTLY_READING', 'READ']),
+  status: z.enum(['WANT_TO_READ', 'CURRENTLY_READING', 'READ', 'ABANDONED']),
   // valueAsNumber in register() coerces the string to number before zod sees it
   currentPage: z.number().min(0).optional(),
   rating: z.number().min(1).max(5).nullable().optional(),
@@ -243,6 +243,7 @@ function EditorForm({
               <option value="WANT_TO_READ">Want to Read</option>
               <option value="CURRENTLY_READING">Currently Reading</option>
               <option value="READ">Read</option>
+              <option value="ABANDONED">Did Not Finish</option>
             </select>
             {errors.status && (
               <p className="text-sm text-destructive">{errors.status.message}</p>
@@ -325,7 +326,9 @@ function EditorForm({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="dateFinished">Date Finished</Label>
+            <Label htmlFor="dateFinished">
+              {statusValue === 'ABANDONED' ? 'Date Stopped' : 'Date Finished'}
+            </Label>
             <Input
               id="dateFinished"
               type="date"

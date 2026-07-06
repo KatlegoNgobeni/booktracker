@@ -54,7 +54,7 @@ export interface BookDetail {
 }
 
 // Derived from ShelfStatus.java (enum STRING values — @Enumerated(EnumType.STRING))
-export type ShelfStatus = 'WANT_TO_READ' | 'CURRENTLY_READING' | 'READ';
+export type ShelfStatus = 'WANT_TO_READ' | 'CURRENTLY_READING' | 'READ' | 'ABANDONED';
 
 // Derived from ShelfEntryDto.java
 export interface ShelfEntry {
