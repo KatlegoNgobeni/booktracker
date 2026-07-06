@@ -3,6 +3,10 @@ package com.booktracker.shelf;
 import com.booktracker.books.BookEntity;
 import com.booktracker.books.BookRepository;
 import com.booktracker.books.BookService;
+import com.booktracker.notification.NotificationService;
+import com.booktracker.notification.NotificationType;
+import com.booktracker.social.FriendRequestEntity;
+import com.booktracker.social.FriendRequestRepository;
 import com.booktracker.user.UserEntity;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -13,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -49,13 +54,33 @@ public class ShelfService {
     private final ShelfRepository shelfRepository;
     private final BookService bookService;
     private final BookRepository bookRepository;
+    private final FriendRequestRepository friendRequestRepository;
+    private final NotificationService notificationService;
 
+    /**
+     * Constructor injection — Plan 09-04 adds FriendRequestRepository and NotificationService
+     * for the FRIEND_FINISHED_BOOK trigger in {@link #updateMetadata}.
+     *
+     * <p><strong>RESEARCH Pitfall 6 (circular dependency):</strong>
+     * {@link NotificationService} does NOT inject {@link ShelfService} back — the trigger
+     * only passes the entry {@code id} (UUID) as {@code entityId}, never a full DTO.
+     *
+     * @param shelfRepository          shelf entry persistence store
+     * @param bookService              book fetch-and-cache
+     * @param bookRepository           book FK resolution
+     * @param friendRequestRepository  friend lookup for FRIEND_FINISHED_BOOK fan-out
+     * @param notificationService      notification persist+push
+     */
     public ShelfService(ShelfRepository shelfRepository,
                         BookService bookService,
-                        BookRepository bookRepository) {
+                        BookRepository bookRepository,
+                        FriendRequestRepository friendRequestRepository,
+                        NotificationService notificationService) {
         this.shelfRepository = shelfRepository;
         this.bookService = bookService;
         this.bookRepository = bookRepository;
+        this.friendRequestRepository = friendRequestRepository;
+        this.notificationService = notificationService;
     }
 
     /**
@@ -91,6 +116,11 @@ public class ShelfService {
         entry.setUser(user);
         entry.setBook(bookEntity);
         entry.setShelfStatus(status);
+        // D-10: mirror applyAutoDateRules for the initial-add path — updateMetadata handles
+        // transitions, but addToShelf bypasses that method entirely.
+        if (status == ShelfStatus.READ) {
+            entry.setDateFinished(LocalDate.now());
+        }
 
         try {
             // saveAndFlush forces an immediate SQL INSERT within the transaction so
@@ -98,6 +128,21 @@ public class ShelfService {
             // allowing us to catch it and return 409 before the GlobalExceptionHandler
             // gets a chance to return "Email already registered" (D-03, Pitfall 1).
             UserBookEntity saved = shelfRepository.saveAndFlush(entry);
+
+            // Mirror the FRIEND_FINISHED_BOOK fan-out from updateMetadata: adding directly
+            // to READ shelf is a finish event and should notify friends, same as a READ transition.
+            if (status == ShelfStatus.READ) {
+                List<FriendRequestEntity> acceptedRelationships =
+                        friendRequestRepository.findAcceptedRelationships(user.getId());
+                for (FriendRequestEntity fr : acceptedRelationships) {
+                    UserEntity friend = fr.getRequester().getId().equals(user.getId())
+                            ? fr.getRecipient()
+                            : fr.getRequester();
+                    notificationService.createNotification(friend, NotificationType.FRIEND_FINISHED_BOOK,
+                            user, saved.getId());
+                }
+            }
+
             return toDto(saved);
         } catch (DataIntegrityViolationException e) {
             // user_books_user_book_uq constraint fired — duplicate (SHELF-01, D-03).
@@ -159,6 +204,11 @@ public class ShelfService {
     public ShelfEntryDto updateMetadata(UUID id, UpdateShelfRequest req, UserEntity user) {
         UserBookEntity entry = getEntryForUser(id, user);
 
+        // Capture whether a READ transition is happening BEFORE updating the status
+        // (plan must read old status before setting new status — same as applyAutoDateRules)
+        boolean wasNotRead = entry.getShelfStatus() != ShelfStatus.READ;
+        boolean willBeRead = req.getStatus() == ShelfStatus.READ;
+
         if (req.getStatus() != null) {
             // D-13: auto-date logic lives here, reads old status BEFORE updating.
             applyAutoDateRules(entry, req.getStatus());
@@ -179,6 +229,24 @@ public class ShelfService {
         }
 
         shelfRepository.save(entry);
+
+        // NOTIF-01 trigger: FRIEND_FINISHED_BOOK — fan out to all accepted friends
+        // Only fires when the status transitions INTO READ (not on already-READ updates).
+        // Synchronous within the @Transactional method (RESEARCH Pitfall 6 / RESOLVED Open Question 1).
+        // Safe no-op when each friend is not connected (RESEARCH Assumption A3).
+        if (wasNotRead && willBeRead) {
+            List<FriendRequestEntity> acceptedRelationships =
+                    friendRequestRepository.findAcceptedRelationships(user.getId());
+            for (FriendRequestEntity fr : acceptedRelationships) {
+                // Derive the "other" user: requester if current user is recipient, recipient otherwise
+                UserEntity friend = fr.getRequester().getId().equals(user.getId())
+                        ? fr.getRecipient()
+                        : fr.getRequester();
+                notificationService.createNotification(friend, NotificationType.FRIEND_FINISHED_BOOK,
+                        user, entry.getId());
+            }
+        }
+
         return toDto(entry);
     }
 

@@ -122,6 +122,14 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- WebSocket / STOMP / SockJS server support (Plan 09-04: NOTIF-02).
+             Version is BOM-managed by spring-boot-starter-parent — no explicit version needed.
+             First-party Spring starter; approved in RESEARCH Package Legitimacy Audit. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+
         <!-- WireMock — HTTP stub server for Open Library integration tests (Plan 02).
              Added in Plan 01 to avoid a second pom.xml edit in a later wave.
              wiremock-spring-boot is the official WireMock Spring Boot integration

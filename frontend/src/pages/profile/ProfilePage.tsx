@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { api, TOKEN_KEY } from '../../lib/api';
 import { QUERY_KEYS } from '../../lib/queryKeys';
+import { usePublicProfile } from '../../hooks/useSocial';
 import { useTheme } from '../../hooks/useTheme';
 import { Avatar, AvatarFallback } from '../../components/ui/avatar';
 import { Button } from '../../components/ui/button';
@@ -43,6 +44,7 @@ export function ProfilePage() {
     queryKey: QUERY_KEYS.me(),
     queryFn: () => api.get<UserMe>('/users/me').then((r) => r.data),
   });
+  const { data: socialProfile } = usePublicProfile(me?.id ?? '');
 
   function handleSignOut() {
     localStorage.removeItem(TOKEN_KEY);
@@ -74,6 +76,12 @@ export function ProfilePage() {
           <p className="text-xl font-semibold">{me.displayName}</p>
           <p className="text-sm text-muted-foreground">{me.email}</p>
         </div>
+        {socialProfile && (
+          <div className="flex gap-6 text-sm">
+            <span><strong className="text-foreground">{socialProfile.followerCount}</strong> <span className="text-muted-foreground">followers</span></span>
+            <span><strong className="text-foreground">{socialProfile.followingCount}</strong> <span className="text-muted-foreground">following</span></span>
+          </div>
+        )}
       </div>
 
       <Separator />

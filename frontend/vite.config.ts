@@ -47,17 +47,23 @@ export default defineConfig({
       },
     }),
   ],
+  define: {
+    // sockjs-client references Node.js `global`; polyfill it for the browser.
+    global: 'globalThis',
+  },
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },
   server: {
     proxy: {
       '/api': { target: 'http://localhost:8080', changeOrigin: true },
+      '/ws': { target: 'http://localhost:8080', changeOrigin: true, ws: true },
     },
   },
   preview: {
     proxy: {
       '/api': { target: 'http://localhost:8080', changeOrigin: true },
+      '/ws': { target: 'http://localhost:8080', changeOrigin: true, ws: true },
     },
   },
   test: {

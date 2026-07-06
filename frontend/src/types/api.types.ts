@@ -105,3 +105,107 @@ export interface Page<T> {
   totalPages: number;
   totalElements: number;
 }
+
+// ────────────────────────────────────────────────────────
+// Social layer types (Phase 8 — SOCIAL-01/02/03)
+// Derived from: PublicShelfEntryDto, PublicProfileDto, FeedItemDto, FollowStatusDto
+// ────────────────────────────────────────────────────────
+
+// Derived from PublicShelfEntryDto.java
+export interface PublicShelfEntry {
+  entryId: string;
+  title: string;
+  authors: string | null;    // comma-joined; nullable
+  coverId: string | null;
+  olKey: string;             // short form e.g. "OL45804W"
+  rating: number | null;     // 1–5 or null
+  review: string | null;
+  dateFinished: string | null; // ISO date YYYY-MM-DD
+  likeCount: number;           // total likes on this entry (DISC-04)
+  likedByMe: boolean;          // whether the authenticated viewer has liked this entry (DISC-04)
+}
+
+// Derived from PublicProfileDto.java (@JsonInclude(NON_NULL) — optional fields absent when null)
+export interface PublicProfile {
+  userId: string;
+  displayName: string;
+  followerCount: number;
+  followingCount: number;
+  isFollowing: boolean;          // does the authenticated user follow this profile?
+  goalTarget?: number;           // absent if no goal set
+  goalProgressPercent?: number;  // absent if no goal set; capped at 100.0
+  booksReadThisYear: number;
+  readEntries: Page<PublicShelfEntry>; // paginated READ shelf
+}
+
+// Derived from FeedItemDto.java (@JsonInclude(NON_NULL))
+export interface FeedItem {
+  entryId: string;           // user_books UUID (dedup key + click-through)
+  userId: string;            // the reader (link to /users/:id)
+  displayName: string;       // the reader's display name
+  bookTitle: string;
+  bookOlKey: string;         // short form; link to /books/:olKey
+  bookCoverId: string | null;
+  bookAuthors: string | null; // comma-joined
+  rating: number | null;
+  review: string | null;
+  dateFinished: string;      // ISO date YYYY-MM-DD (relative timestamp)
+  createdAt: string;         // ISO OffsetDateTime (entry creation time)
+}
+
+// Derived from FollowStatusDto.java
+export interface FollowStatus {
+  following: boolean;
+}
+
+// ────────────────────────────────────────────────────────
+// Discovery & friend-request types (Phase 9 — DISC-01/02/03/04)
+// Derived from: FriendStatus.java, FriendRequestDto.java, UserSearchResultDto.java
+// ────────────────────────────────────────────────────────
+
+// Derived from FriendStatus.java enum
+// Drives the 4-state FriendRequestButton (D-06)
+export type FriendStatus = 'NONE' | 'PENDING_SENT' | 'PENDING_RECEIVED' | 'ACCEPTED';
+
+// Derived from FriendRequestDto.java
+// Returned by POST/PUT /friend-requests and GET /friend-requests/pending-received
+export interface FriendRequest {
+  id: string;
+  requesterId: string;
+  recipientId: string;
+  requesterDisplayName: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
+  createdAt: string; // ISO OffsetDateTime
+}
+
+// Derived from UserSearchResultDto.java
+// Returned in Page<UserSearchResultDto> by GET /api/users/search?q=
+export interface UserSearchResult {
+  id: string;
+  displayName: string;
+  friendStatus: FriendStatus;
+  requestId?: string; // present when PENDING_SENT or PENDING_RECEIVED
+}
+
+// ────────────────────────────────────────────────────────
+// Notification types (Phase 9 — NOTIF-01/02/03)
+// Derived from: NotificationType.java enum, NotificationDto.java
+// ────────────────────────────────────────────────────────
+
+// Derived from NotificationType.java enum
+export type NotificationType =
+  | 'FRIEND_REQUEST'
+  | 'FRIEND_ACCEPTED'
+  | 'FRIEND_FINISHED_BOOK'
+  | 'REVIEW_LIKED';
+
+// Derived from NotificationDto.java
+export interface NotificationDto {
+  id: string;
+  type: NotificationType;
+  actorId: string;
+  actorDisplayName: string;
+  entityId: string | null; // entryId for FRIEND_FINISHED_BOOK / REVIEW_LIKED; null for friend events
+  isRead: boolean;
+  createdAt: string; // ISO OffsetDateTime
+}
