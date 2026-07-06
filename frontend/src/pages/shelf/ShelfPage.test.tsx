@@ -6,6 +6,9 @@
  * 2a. A Currently Reading entry with non-null pageCount renders a progress bar
  * 2b. A Currently Reading entry with null pageCount renders "Page {n}" text and no progress bar
  * 3. A Read entry renders its StarRating (read-only) — role="group" aria-label="Star rating"
+ * 4. ShelfPage renders a DNF tab labelled "DNF"
+ * 5. DNF tab lists ABANDONED entries when api returns them
+ * 6. Empty DNF tab shows "No abandoned books" empty-state copy
  *
  * Note on Radix UI Tabs: TabsContent is lazy-mounted — only the active tab's content renders
  * initially. Clicking a tab mounts its content, triggering the useShelfList query.
@@ -87,6 +90,22 @@ const readEntryWithRating: ShelfEntry = {
   dateStarted: null,
   dateFinished: '2024-01-10',
   createdAt: '2024-01-01T00:00:00Z',
+};
+
+const abandonedEntry: ShelfEntry = {
+  entryId: 'entry-4',
+  status: 'ABANDONED',
+  title: 'The Unfinished Book',
+  olKey: '/works/OL4W',
+  coverId: null,
+  authors: 'Some Author',
+  rating: null,
+  review: null,
+  currentPage: null,
+  pageCount: null,
+  dateStarted: '2024-02-01',
+  dateFinished: '2024-03-15',
+  createdAt: '2024-02-01T00:00:00Z',
 };
 
 beforeEach(() => {
@@ -196,5 +215,46 @@ describe('ShelfPage', () => {
     // Interactive mode buttons labelled "Rate N stars" must NOT appear
     expect(screen.queryByRole('button', { name: /rate/i })).not.toBeInTheDocument();
     expect(screen.getByRole('group', { name: /star rating/i })).toBeInTheDocument();
+  });
+
+  it('Test 4: renders a DNF tab control labelled "DNF"', () => {
+    renderShelfPage();
+    expect(screen.getByRole('tab', { name: 'DNF' })).toBeInTheDocument();
+  });
+
+  it('Test 5: DNF tab lists ABANDONED entries', async () => {
+    vi.mocked(api.get).mockImplementation((_url: string, cfg: any) => {
+      if (cfg?.params?.status === 'ABANDONED') {
+        return Promise.resolve({
+          data: {
+            content: [abandonedEntry],
+            number: 0,
+            size: 20,
+            totalPages: 1,
+            totalElements: 1,
+          },
+        });
+      }
+      return Promise.resolve({ data: emptyPage });
+    });
+
+    const { user } = renderShelfPage();
+
+    await user.click(screen.getByRole('tab', { name: 'DNF' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('The Unfinished Book')).toBeInTheDocument(),
+    );
+  });
+
+  it('Test 6: empty DNF tab shows "No abandoned books" empty-state copy', async () => {
+    // Default mock returns empty pages for all statuses
+    const { user } = renderShelfPage();
+
+    await user.click(screen.getByRole('tab', { name: 'DNF' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('No abandoned books')).toBeInTheDocument(),
+    );
   });
 });
