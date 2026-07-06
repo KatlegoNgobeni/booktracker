@@ -177,9 +177,12 @@ public class FriendRequestService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not authorized to reject this request");
         }
 
-        entity.setStatus("REJECTED");
-        entity = friendRequestRepository.save(entity);
-        return toDto(entity);
+        // Delete the row (not set to REJECTED) so the requester can re-send later.
+        // Same pattern as cancelRequest — the unique(requester_id, recipient_id) constraint
+        // would otherwise permanently block a new request after one rejection.
+        FriendRequestDto dto = toDto(entity);
+        friendRequestRepository.delete(entity);
+        return dto;
     }
 
     /**

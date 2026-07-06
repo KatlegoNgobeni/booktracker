@@ -124,38 +124,38 @@ export function FeedPage() {
     );
   }
 
-  if (items.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-2 py-16 px-4 text-center">
-        <p className="text-base font-semibold">No activity yet</p>
-        <p className="text-sm text-muted-foreground max-w-xs">
-          Follow some readers to see their recent finishes here.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="px-4 pt-4 pb-4">
       {/* D-10: hidden when no pending requests; returns null when empty */}
       <PendingRequestsWidget />
       <h1 className="text-xl font-semibold mb-3">Feed</h1>
 
-      <div className="flex flex-col">
-        {items.map((item) => (
-          <FeedItemCard key={item.entryId} item={item} />
-        ))}
-      </div>
+      {items.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-16 px-4 text-center">
+          <p className="text-base font-semibold">No activity yet</p>
+          <p className="text-sm text-muted-foreground max-w-xs">
+            Add friends and finish books to see activity here.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col">
+            {items.map((item) => (
+              <FeedItemCard key={item.entryId} item={item} />
+            ))}
+          </div>
 
-      {hasNextPage && (
-        <Button
-          variant="outline"
-          className="w-full mt-4"
-          onClick={() => fetchNextPage()}
-          disabled={isFetchingNextPage}
-        >
-          {isFetchingNextPage ? 'Loading…' : 'Load more'}
-        </Button>
+          {hasNextPage && (
+            <Button
+              variant="outline"
+              className="w-full mt-4"
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+            >
+              {isFetchingNextPage ? 'Loading…' : 'Load more'}
+            </Button>
+          )}
+        </>
       )}
     </div>
   );

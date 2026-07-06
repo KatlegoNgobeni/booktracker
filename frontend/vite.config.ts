@@ -47,6 +47,10 @@ export default defineConfig({
       },
     }),
   ],
+  define: {
+    // sockjs-client references Node.js `global`; polyfill it for the browser.
+    global: 'globalThis',
+  },
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },
   },

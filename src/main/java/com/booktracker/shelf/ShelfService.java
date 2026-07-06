@@ -116,6 +116,11 @@ public class ShelfService {
         entry.setUser(user);
         entry.setBook(bookEntity);
         entry.setShelfStatus(status);
+        // D-10: mirror applyAutoDateRules for the initial-add path — updateMetadata handles
+        // transitions, but addToShelf bypasses that method entirely.
+        if (status == ShelfStatus.READ) {
+            entry.setDateFinished(LocalDate.now());
+        }
 
         try {
             // saveAndFlush forces an immediate SQL INSERT within the transaction so

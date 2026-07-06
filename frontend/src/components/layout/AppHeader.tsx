@@ -53,6 +53,10 @@ export function AppHeader() {
         queryKey: QUERY_KEYS.notifications(),
       });
     }
+    // A friend finished a book — invalidate the feed so it updates without a page refresh.
+    if (_notif.type === 'FRIEND_FINISHED_BOOK') {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed() });
+    }
   };
 
   // Mount the STOMP/SockJS connection at AppHeader level (inside AppLayout) so the

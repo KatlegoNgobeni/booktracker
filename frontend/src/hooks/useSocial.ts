@@ -177,6 +177,10 @@ export function useSendFriendRequest(userId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['userSearch'] });
     },
+    onError: () => {
+      // Refresh search so stale friendStatus (e.g. after a race or rejected request) is corrected.
+      queryClient.invalidateQueries({ queryKey: ['userSearch'] });
+    },
   });
 }
 
@@ -231,6 +235,10 @@ export function useCancelFriendRequest(requestId: string) {
   return useMutation({
     mutationFn: () => api.delete(`/friend-requests/${requestId}`),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userSearch'] });
+    },
+    onError: () => {
+      // Request may have been rejected/deleted by the other user — refresh search to show real state.
       queryClient.invalidateQueries({ queryKey: ['userSearch'] });
     },
   });
