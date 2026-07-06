@@ -47,8 +47,8 @@ export function useNotifications() {
     queryKey: QUERY_KEYS.notifications(),
     queryFn: () =>
       api
-        .get<NotificationDto[]>('/notifications')
-        .then((r) => r.data),
+        .get<{ content: NotificationDto[] }>('/notifications')
+        .then((r) => r.data.content),
     enabled: false,
   });
 }

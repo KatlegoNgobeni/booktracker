@@ -128,6 +128,21 @@ public class ShelfService {
             // allowing us to catch it and return 409 before the GlobalExceptionHandler
             // gets a chance to return "Email already registered" (D-03, Pitfall 1).
             UserBookEntity saved = shelfRepository.saveAndFlush(entry);
+
+            // Mirror the FRIEND_FINISHED_BOOK fan-out from updateMetadata: adding directly
+            // to READ shelf is a finish event and should notify friends, same as a READ transition.
+            if (status == ShelfStatus.READ) {
+                List<FriendRequestEntity> acceptedRelationships =
+                        friendRequestRepository.findAcceptedRelationships(user.getId());
+                for (FriendRequestEntity fr : acceptedRelationships) {
+                    UserEntity friend = fr.getRequester().getId().equals(user.getId())
+                            ? fr.getRecipient()
+                            : fr.getRequester();
+                    notificationService.createNotification(friend, NotificationType.FRIEND_FINISHED_BOOK,
+                            user, saved.getId());
+                }
+            }
+
             return toDto(saved);
         } catch (DataIntegrityViolationException e) {
             // user_books_user_book_uq constraint fired — duplicate (SHELF-01, D-03).

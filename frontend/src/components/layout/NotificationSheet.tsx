@@ -20,6 +20,7 @@
  * Security notes:
  * - T-09-21: All user-provided strings rendered via JSX text interpolation only — no dangerouslySetInnerHTML.
  */
+import { useEffect } from 'react';
 import { Bell, Loader2, UserPlus, UserCheck, BookOpen, Heart } from 'lucide-react';
 import {
   Sheet,
@@ -68,10 +69,11 @@ interface NotificationSheetProps {
 export function NotificationSheet({ open, onOpenChange }: NotificationSheetProps) {
   const { data: notifications = [], isFetching, error, refetch } = useNotifications();
 
-  // No useEffect refetch here — markAllRead.onSuccess in AppHeader triggers refetchQueries
-  // so the GET fires only after the POST completes (avoids the GET/POST race where the inbox
-  // would briefly show isRead:false items). handleNotification also calls refetchQueries
-  // directly when the sheet is open (finding 1 / finding 9).
+  // Trigger a fetch whenever the sheet opens. refetchQueries from markAllRead.onSuccess
+  // fires before this hook is mounted/registered on first open, so we need a local trigger.
+  useEffect(() => {
+    if (open) refetch();
+  }, [open, refetch]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
