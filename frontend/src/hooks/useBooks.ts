@@ -60,7 +60,9 @@ export function useAddToShelf() {
   return useMutation({
     mutationFn: ({ olKey, status }: { olKey: string; status: ShelfStatus }) =>
       api.post<ShelfEntry>('/shelf', { olKey, status }).then((r) => r.data),
-    onSuccess: () => {
+    onSuccess: (newEntry) => {
+      // Seed by-book cache so useShelfEntryForBook works without a shelf list fetch.
+      queryClient.setQueryData(['shelf', 'by-book', newEntry.olKey], newEntry);
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.shelf() });
     },
   });
@@ -79,11 +81,15 @@ export function useAddToShelf() {
  */
 export function useShelfEntryForBook(olKey: string): ShelfEntry | undefined {
   const queryClient = useQueryClient();
+  // Fast path: by-book cache seeded by useAddToShelf / useUpdateShelfMetadata.
+  // Works even when the shelf list has never been fetched (e.g. came from search).
+  const byBook = queryClient.getQueryData<ShelfEntry>(['shelf', 'by-book', olKey]);
+  if (byBook) return byBook;
+  // Fallback: scan shelf list cache (warm after user visits the Shelf page).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cachedQueries = queryClient.getQueriesData<any>({ queryKey: ['shelf'] });
   for (const [, data] of cachedQueries) {
     if (!data) continue;
-    // Handle InfiniteData<Page<T>> (useInfiniteQuery) and Page<T> (useQuery)
     const pages: Array<Page<ShelfEntry>> = data.pages ? data.pages : [data];
     for (const page of pages) {
       const content: ShelfEntry[] = page?.content ?? [];

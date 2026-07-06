@@ -92,8 +92,9 @@ export function useUpdateShelfMetadata(id: string) {
       dateStarted: string | null;
       dateFinished: string | null;
     }) => api.patch<ShelfEntry>('/shelf/' + id, body).then((r) => r.data),
-    onSuccess: () => {
-      // Invalidate all shelf list queries (all statuses) + this entry's detail
+    onSuccess: (updatedEntry) => {
+      // Keep by-book cache in sync so BookDetailPage shows correct status after save.
+      queryClient.setQueryData(['shelf', 'by-book', updatedEntry.olKey], updatedEntry);
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.shelf() });
       queryClient.invalidateQueries({ queryKey: ['shelf', 'entry', id] });
     },
@@ -131,6 +132,7 @@ export function useRemoveShelfEntry(id: string) {
   return useMutation({
     mutationFn: () => api.delete('/shelf/' + id),
     onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ['shelf', 'by-book'] });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.shelf() });
     },
   });
