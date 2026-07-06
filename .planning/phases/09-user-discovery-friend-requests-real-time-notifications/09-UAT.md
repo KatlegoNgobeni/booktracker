@@ -3,7 +3,7 @@ status: complete
 phase: 09-user-discovery-friend-requests-real-time-notifications
 source: 09-01-SUMMARY.md, 09-02-SUMMARY.md, 09-03-SUMMARY.md, 09-04-SUMMARY.md, 09-05-SUMMARY.md, 09-06-SUMMARY.md
 started: 2026-07-05T00:00:00Z
-updated: 2026-07-06T12:15:00Z
+updated: 2026-07-06T18:00:00Z
 ---
 
 ## Current Test
@@ -30,10 +30,8 @@ result: pass
 
 ### 5. Pending Requests Widget on Feed
 expected: Log in as a second user (the one you sent a request to in Test 3, or have another user send you a request). Open the Feed page. A "Friend requests" section appears above the feed listing any incoming pending requests — each showing the requester's name and Accept / Reject buttons. The widget is absent (not rendered) when there are no pending requests.
-result: issue
-reported: "Widget not visible on Feed page when feed is empty (no activity yet)"
-severity: major
-fixed: PendingRequestsWidget was inside the non-empty items branch; moved above the empty-state inline so it renders regardless of feed content
+result: pass
+note: was issue (widget hidden in empty-state branch); fixed in 9180c16 — re-verified pass
 
 ### 6. Accept Friend Request
 expected: In the Pending Requests Widget (Test 5), click Accept on an incoming request. The request row disappears immediately (no reload). The friend's book activity should now be eligible to appear in your Feed. If you search the now-friend in the People tab, the button shows "Friends" (disabled).
@@ -45,9 +43,8 @@ result: pass
 
 ### 8. Friends-based Feed
 expected: After accepting a friend request (Test 6), the Feed page shows that friend's book activity (books they've added to their shelf, reviews, etc.). Books from users who are not friends do not appear in the Feed (the feed is no longer follows-based).
-result: issue
-reported: "Feed only shows a friend's book if they left a review. Books marked READ without a review don't appear. Also, new additions don't appear until the entire page is refreshed."
-severity: major
+result: pass
+note: was issue (dateFinished not set on READ add; feed query not invalidated on WS push); fixed in 9180c16 — re-verified pass
 
 ### 9. Like a Review
 expected: Visit another user's public profile page. On a book entry that has a review, a heart icon button is visible below the review text. Click the heart. The heart fills red and the like count increments by 1. The mutation is immediate (no page reload needed).
@@ -104,25 +101,15 @@ blocked: 0
 ## Gaps
 
 - truth: "Feed shows all friend's READ books, with or without a review"
-  status: failed
+  status: resolved
   reason: "User reported: only books with a review appear in the feed"
   severity: major
   test: 8
-  root_cause: "addToShelf() sets shelfStatus=READ but never calls applyAutoDateRules, so dateFinished is null. findFeedForFriends requires dateFinished IS NOT NULL, so books added directly as READ never appear until updateMetadata() is called (e.g. when adding a review), which runs applyAutoDateRules and sets dateFinished."
-  artifacts:
-    - path: "src/main/java/com/booktracker/shelf/ShelfService.java"
-      issue: "addToShelf() does not set dateFinished when status=READ (D-10 auto-date only fires in applyAutoDateRules, which is only called from updateMetadata)"
-  missing:
-    - "In addToShelf(), after entry.setShelfStatus(status), add: if (status == ShelfStatus.READ && entry.getDateFinished() == null) { entry.setDateFinished(LocalDate.now()); }"
+  fix: "addToShelf() now sets dateFinished when status=READ (commit 9180c16) — re-verified pass"
 
 - truth: "New friend activity appears in feed without a manual page refresh"
-  status: failed
+  status: resolved
   reason: "User reported: feed requires full page refresh to show new additions"
   severity: major
   test: 8
-  root_cause: "handleNotification() in AppHeader.tsx only invalidates notificationsUnreadCount and notifications query keys. FRIEND_FINISHED_BOOK notifications arrive via WebSocket but the feed query key is never invalidated, so TanStack Query serves stale data until the page is reloaded."
-  artifacts:
-    - path: "frontend/src/components/layout/AppHeader.tsx"
-      issue: "handleNotification does not invalidate QUERY_KEYS.feed() on FRIEND_FINISHED_BOOK notification type"
-  missing:
-    - "In handleNotification(), add: if (_notif.type === 'FRIEND_FINISHED_BOOK') { queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed() }); }"
+  fix: "handleNotification() now invalidates QUERY_KEYS.feed() on FRIEND_FINISHED_BOOK (commit 9180c16) — re-verified pass"
