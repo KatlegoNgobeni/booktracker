@@ -116,9 +116,10 @@ public class ShelfService {
         entry.setUser(user);
         entry.setBook(bookEntity);
         entry.setShelfStatus(status);
-        // D-10: mirror applyAutoDateRules for the initial-add path — updateMetadata handles
+        // D-10 / D-14: mirror applyAutoDateRules for the initial-add path — updateMetadata handles
         // transitions, but addToShelf bypasses that method entirely.
-        if (status == ShelfStatus.READ) {
+        // Set dateFinished for both READ ("Date Finished") and ABANDONED ("Date Stopped").
+        if (status == ShelfStatus.READ || status == ShelfStatus.ABANDONED) {
             entry.setDateFinished(LocalDate.now());
         }
 
@@ -304,15 +305,30 @@ public class ShelfService {
     }
 
     /**
-     * Apply auto-date rules before a status change (D-10, D-11, D-12 — D-13: service only).
+     * Apply auto-date rules before a status change (D-10, D-11, D-12, D-14, D-15 — D-13: service only).
      *
      * <p>Must be called BEFORE {@code entry.setShelfStatus(newStatus)} so that the old
      * status can be read via {@code entry.getShelfStatus()}.
      *
+     * <p><strong>Rule ordering (critical):</strong> Clear rules (D-12, D-15) run BEFORE set rules
+     * (D-10 / D-11 / D-14). This ensures READ→ABANDONED correctly clears the old dateFinished
+     * first and then re-sets it to today via D-14, rather than leaving it as the stale past date
+     * (Pitfall 3: wrong ordering would silently preserve the old READ date on an ABANDONED entry).
+     *
      * <ul>
-     *   <li>D-10: {@code newStatus == READ} and {@code dateFinished == null} → set to today</li>
-     *   <li>D-11: {@code newStatus == CURRENTLY_READING} and {@code dateStarted == null} → set to today</li>
-     *   <li>D-12: {@code oldStatus == READ} and {@code newStatus != READ} → clear dateFinished</li>
+     *   <li>D-12 (clear): {@code oldStatus == READ} and {@code newStatus != READ} → clear dateFinished.
+     *       Covers READ→WANT_TO_READ, READ→CURRENTLY_READING, and READ→ABANDONED. For the
+     *       READ→ABANDONED path, D-14 then fires immediately after to set dateFinished to today.</li>
+     *   <li>D-15 (clear): {@code oldStatus == ABANDONED} and
+     *       {@code (newStatus == WANT_TO_READ || newStatus == CURRENTLY_READING)} → clear dateFinished.
+     *       Handles re-shelving from ABANDONED back to an active status (SHELF-06).
+     *       dateStarted is intentionally NOT cleared — the start date is historically accurate
+     *       and should be preserved (Open Question 2 resolution).</li>
+     *   <li>D-10 (set): {@code newStatus == READ} and {@code dateFinished == null} → set to today</li>
+     *   <li>D-11 (set): {@code newStatus == CURRENTLY_READING} and {@code dateStarted == null} → set to today</li>
+     *   <li>D-14 (set): {@code newStatus == ABANDONED} and {@code dateFinished == null} → set to today
+     *       ("Date Stopped" semantics; only-if-null preserves a manually entered stop date when
+     *       coming from a non-READ status — see abandonedPreservesManualDateFinished test)</li>
      * </ul>
      *
      * @param entry     the shelf entry in its current (pre-update) state
@@ -321,8 +337,26 @@ public class ShelfService {
     private void applyAutoDateRules(UserBookEntity entry, ShelfStatus newStatus) {
         ShelfStatus oldStatus = entry.getShelfStatus();
 
+        // Clear rules run FIRST (D-12 and D-15).
+
+        // D-12: leaving READ toward ANY other status clears stale dateFinished.
+        // Covers READ→WANT_TO_READ, READ→CURRENTLY_READING, and READ→ABANDONED.
+        // For the READ→ABANDONED path, D-14 fires next and re-sets dateFinished to today.
+        if (oldStatus == ShelfStatus.READ && newStatus != ShelfStatus.READ) {
+            entry.setDateFinished(null);
+        }
+
+        // D-15: re-shelving from ABANDONED back to an active status clears the "Date Stopped".
+        // dateStarted is preserved (historically accurate start date, Open Question 2).
+        if (oldStatus == ShelfStatus.ABANDONED
+                && (newStatus == ShelfStatus.WANT_TO_READ
+                || newStatus == ShelfStatus.CURRENTLY_READING)) {
+            entry.setDateFinished(null);
+        }
+
+        // Set rules run AFTER clear rules.
         if (newStatus == ShelfStatus.READ) {
-            // D-10: auto-set dateFinished only if not already set
+            // D-10: auto-set dateFinished only if not already set (preserve manual date)
             if (entry.getDateFinished() == null) {
                 entry.setDateFinished(LocalDate.now());
             }
@@ -331,11 +365,13 @@ public class ShelfService {
             if (entry.getDateStarted() == null) {
                 entry.setDateStarted(LocalDate.now());
             }
-        }
-
-        // D-12: downgrade from READ to any other status — clear stale dateFinished
-        if (oldStatus == ShelfStatus.READ && newStatus != ShelfStatus.READ) {
-            entry.setDateFinished(null);
+        } else if (newStatus == ShelfStatus.ABANDONED) {
+            // D-14: auto-set dateFinished ("Date Stopped") only if not already set.
+            // For READ→ABANDONED: D-12 cleared the old date above, so this fires and sets today.
+            // For WANT_TO_READ→ABANDONED with a manual date: dateFinished is non-null → preserved.
+            if (entry.getDateFinished() == null) {
+                entry.setDateFinished(LocalDate.now());
+            }
         }
     }
 
