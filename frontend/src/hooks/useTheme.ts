@@ -3,6 +3,11 @@
  *
  * - Resolution order (UI-08): localStorage 'booktracker_theme' → prefers-color-scheme → 'light'
  * - useEffect adds/removes 'light'/'dark' class on document.documentElement
+ * - The theme effect also re-syncs root.style.colorScheme: the index.html FOUC
+ *   bootstrap pins an INLINE colorScheme pre-paint, and inline styles outrank
+ *   the `.dark { color-scheme: dark }` CSS rule — without this re-sync a runtime
+ *   toggle would flip tokens via the class but leave native scrollbars/form
+ *   controls in the stale scheme
  * - Persists to localStorage ONLY on explicit toggle() (WR-05) — an OS-derived
  *   theme is never written, so the UI-08 fallback chain keeps following the OS
  *   until the user makes a choice (incl. live prefers-color-scheme changes)
@@ -32,6 +37,9 @@ export function useTheme() {
     const root = document.documentElement;
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
+    // Re-sync the native canvas: the FOUC bootstrap's inline colorScheme
+    // outranks the .dark CSS rule, so it must track every theme change.
+    root.style.colorScheme = theme;
     // WR-04: keep the browser/status-bar chrome in sync with the APP theme.
     // #0a0a0a matches the dark --background token oklch(0.145 0 0).
     document
