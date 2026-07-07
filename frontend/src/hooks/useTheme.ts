@@ -31,6 +31,11 @@ export function useTheme() {
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
     localStorage.setItem(THEME_KEY, theme);
+    // WR-04: keep the browser/status-bar chrome in sync with the APP theme.
+    // #0a0a0a matches the dark --background token oklch(0.145 0 0).
+    document
+      .querySelector('meta[name="theme-color"]:not([media])')
+      ?.setAttribute('content', theme === 'dark' ? '#0a0a0a' : '#ffffff');
   }, [theme]);
 
   const toggle = () => setTheme((t) => (t === 'light' ? 'dark' : 'light'));

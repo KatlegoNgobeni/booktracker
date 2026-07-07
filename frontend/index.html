@@ -4,15 +4,23 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#262626" media="(prefers-color-scheme: dark)" />
+    <!-- Single non-media theme-color tag: updated dynamically by the FOUC script
+         below and by useTheme's effect so the status bar tracks the APP theme
+         (localStorage-first), not the OS preference (WR-04). Dark value #0a0a0a
+         matches the dark --background token oklch(0.145 0 0). -->
+    <meta name="theme-color" content="#ffffff" />
     <!-- FOUC bootstrap (UI-03/UI-08): applies .dark synchronously before React mounts.
          Key MUST match useTheme THEME_KEY ('booktracker_theme'). Plain script, NOT type="module". -->
     <script>
       (function () {
         var stored = localStorage.getItem('booktracker_theme');
-        if (stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        var dark = stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) {
           document.documentElement.classList.add('dark');
+        }
+        var meta = document.querySelector('meta[name="theme-color"]:not([media])');
+        if (meta) {
+          meta.setAttribute('content', dark ? '#0a0a0a' : '#ffffff');
         }
       })();
     </script>
