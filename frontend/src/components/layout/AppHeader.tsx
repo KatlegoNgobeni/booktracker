@@ -96,10 +96,10 @@ export function AppHeader() {
             )}
           </button>
 
-          {/* Bell button with relative positioning for badge overlay */}
+          {/* Bell button with relative positioning for badge overlay (UI-02, 44x44 hit area) */}
           <button
             aria-label="Notifications"
-          className="relative flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            className="relative flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
             disabled={markAllReadPending}
             onClick={handleBellClick}
           >
