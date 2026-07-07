@@ -109,6 +109,8 @@ export function SearchPage() {
 
   return (
     <div className="pb-16">
+      <h1 className="text-[28px] font-semibold mb-4">Search</h1>
+
       {/* Tab bar — Books / People */}
       <Tabs
         value={activeTab}

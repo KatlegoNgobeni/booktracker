@@ -128,7 +128,7 @@ export function FeedPage() {
     <div className="pb-4">
       {/* D-10: hidden when no pending requests; returns null when empty */}
       <PendingRequestsWidget />
-      <h1 className="text-xl font-semibold mb-3">Feed</h1>
+      <h1 className="text-[28px] font-semibold mb-4">Feed</h1>
 
       {items.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-16 px-4 text-center">

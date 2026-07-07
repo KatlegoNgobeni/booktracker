@@ -18,6 +18,7 @@ import { QUERY_KEYS } from '../../lib/queryKeys';
 import { usePublicProfile } from '../../hooks/useSocial';
 import { Avatar, AvatarFallback } from '../../components/ui/avatar';
 import { Button } from '../../components/ui/button';
+import { Card, CardContent } from '../../components/ui/card';
 import { Separator } from '../../components/ui/separator';
 
 interface UserMe {
@@ -82,23 +83,27 @@ export function ProfilePage() {
   return (
     <div className="pb-16 space-y-6">
       {/* ── Identity ── */}
-      <div className="flex flex-col items-center gap-3 pt-4">
-        <Avatar className="h-16 w-16">
-          <AvatarFallback className="text-xl font-semibold">
-            {getInitials(me.displayName)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="text-center">
-          <p className="text-xl font-semibold">{me.displayName}</p>
-          <p className="text-sm text-muted-foreground">{me.email}</p>
-        </div>
-        {socialProfile && (
-          <div className="flex gap-6 text-sm">
-            <span><strong className="text-foreground">{socialProfile.followerCount}</strong> <span className="text-muted-foreground">followers</span></span>
-            <span><strong className="text-foreground">{socialProfile.followingCount}</strong> <span className="text-muted-foreground">following</span></span>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col items-center gap-3">
+            <Avatar className="h-16 w-16">
+              <AvatarFallback className="text-xl font-semibold">
+                {getInitials(me.displayName)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="text-center">
+              <p className="text-xl font-semibold">{me.displayName}</p>
+              <p className="text-sm text-muted-foreground">{me.email}</p>
+            </div>
+            {socialProfile && (
+              <div className="flex gap-6 text-sm">
+                <span><strong className="text-foreground">{socialProfile.followerCount}</strong> <span className="text-muted-foreground">followers</span></span>
+                <span><strong className="text-foreground">{socialProfile.followingCount}</strong> <span className="text-muted-foreground">following</span></span>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
 
       <Separator />
 
