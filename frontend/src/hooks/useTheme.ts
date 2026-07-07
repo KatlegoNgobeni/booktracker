@@ -1,13 +1,13 @@
 /**
  * useTheme.ts — Dark mode hook persisted to localStorage (D-17 Dark Mode Contract)
  *
- * - Reads initial theme from localStorage 'booktracker_theme' (default: 'light')
- * - If root element already has 'dark' class (from 06-01 bootstrap), initializes to match it
+ * - Resolution order (UI-08): localStorage 'booktracker_theme' → prefers-color-scheme → 'light'
  * - useEffect adds/removes 'light'/'dark' class on document.documentElement
  * - Persists to localStorage key 'booktracker_theme' on every change
  * - toggle() flips between 'light' and 'dark'
  *
- * Used by ProfilePage dark mode switch (D-08).
+ * The inline FOUC script in index.html reads the same key synchronously before
+ * React mounts — keep THEME_KEY in sync with that script.
  * CSS variables in shadcn components are automatic when 'dark' class is applied.
  */
 import { useEffect, useState } from 'react';
@@ -21,8 +21,8 @@ export function useTheme() {
     // Check localStorage first
     const stored = localStorage.getItem(THEME_KEY) as Theme | null;
     if (stored === 'light' || stored === 'dark') return stored;
-    // If root already has 'dark' class (from bootstrap in main.tsx), match it
-    if (document.documentElement.classList.contains('dark')) return 'dark';
+    // Respect OS preference on first visit (UI-08)
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
     return 'light';
   });
 
