@@ -4,7 +4,18 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#475569" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#262626" media="(prefers-color-scheme: dark)" />
+    <!-- FOUC bootstrap (UI-03/UI-08): applies .dark synchronously before React mounts.
+         Key MUST match useTheme THEME_KEY ('booktracker_theme'). Plain script, NOT type="module". -->
+    <script>
+      (function () {
+        var stored = localStorage.getItem('booktracker_theme');
+        if (stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
     <title>BookTracker</title>
   </head>
   <body>
