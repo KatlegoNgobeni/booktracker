@@ -3,8 +3,10 @@
  *
  * - Resolution order (UI-08): localStorage 'booktracker_theme' → prefers-color-scheme → 'light'
  * - useEffect adds/removes 'light'/'dark' class on document.documentElement
- * - Persists to localStorage key 'booktracker_theme' on every change
- * - toggle() flips between 'light' and 'dark'
+ * - Persists to localStorage ONLY on explicit toggle() (WR-05) — an OS-derived
+ *   theme is never written, so the UI-08 fallback chain keeps following the OS
+ *   until the user makes a choice (incl. live prefers-color-scheme changes)
+ * - toggle() flips between 'light' and 'dark' and persists the choice
  *
  * The inline FOUC script in index.html reads the same key synchronously before
  * React mounts — keep THEME_KEY in sync with that script.
@@ -30,7 +32,6 @@ export function useTheme() {
     const root = document.documentElement;
     root.classList.remove('light', 'dark');
     root.classList.add(theme);
-    localStorage.setItem(THEME_KEY, theme);
     // WR-04: keep the browser/status-bar chrome in sync with the APP theme.
     // #0a0a0a matches the dark --background token oklch(0.145 0 0).
     document
@@ -38,7 +39,26 @@ export function useTheme() {
       ?.setAttribute('content', theme === 'dark' ? '#0a0a0a' : '#ffffff');
   }, [theme]);
 
-  const toggle = () => setTheme((t) => (t === 'light' ? 'dark' : 'light'));
+  // WR-05: while the user has never explicitly chosen a theme, follow live
+  // OS preference changes (e.g. scheduled dark mode at sunset).
+  useEffect(() => {
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = (e: MediaQueryListEvent) => {
+      if (localStorage.getItem(THEME_KEY) === null) {
+        setTheme(e.matches ? 'dark' : 'light');
+      }
+    };
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+
+  // WR-05: persist ONLY on explicit user action — never the OS-derived snapshot.
+  const toggle = () =>
+    setTheme((t) => {
+      const next = t === 'light' ? 'dark' : 'light';
+      localStorage.setItem(THEME_KEY, next);
+      return next;
+    });
 
   return { theme, toggle };
 }
