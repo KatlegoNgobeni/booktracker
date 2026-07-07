@@ -86,7 +86,7 @@ export function AppHeader() {
           {/* Dark-mode toggle — Sun shown in dark mode, Moon in light (UI-02, 44x44 hit area) */}
           <button
             aria-label="Toggle dark mode"
-            className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             onClick={toggle}
           >
             {theme === 'dark' ? (
@@ -99,7 +99,7 @@ export function AppHeader() {
           {/* Bell button with relative positioning for badge overlay (UI-02, 44x44 hit area) */}
           <button
             aria-label="Notifications"
-            className="relative flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            className="relative flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             disabled={markAllReadPending}
             onClick={handleBellClick}
           >

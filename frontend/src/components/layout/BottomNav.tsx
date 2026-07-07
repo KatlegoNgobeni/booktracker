@@ -33,8 +33,15 @@ export function BottomNav() {
                 }`
               }
             >
-              <Icon className="h-5 w-5" aria-hidden="true" />
-              <span>{label}</span>
+              {({ isActive }) => (
+                <>
+                  <Icon
+                    className={isActive ? 'h-5 w-5 text-accent' : 'h-5 w-5'}
+                    aria-hidden="true"
+                  />
+                  <span>{label}</span>
+                </>
+              )}
             </NavLink>
           </li>
         ))}

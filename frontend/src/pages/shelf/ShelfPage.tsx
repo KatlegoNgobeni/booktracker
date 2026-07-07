@@ -33,7 +33,7 @@ function ShelfEntryCard({
 }) {
   return (
     <Card
-      className="cursor-pointer hover:bg-accent/5 transition-colors"
+      className="cursor-pointer hover:bg-muted/50 transition-colors"
       onClick={onClick}
     >
       <CardContent className="flex gap-3 p-3">

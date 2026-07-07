@@ -22,7 +22,7 @@ export function StarRating({ value, onChange, readOnly = false }: Props) {
       {[1, 2, 3, 4, 5].map((star) => {
         const filled = value !== null && star <= (value ?? 0);
         const starClass = filled
-          ? 'fill-amber-400 text-amber-400'
+          ? 'fill-accent text-accent'
           : 'text-muted-foreground';
 
         if (readOnly) {
