@@ -37,7 +37,7 @@ function getInitials(name: string): string {
 
 export function ProfilePage() {
   const navigate = useNavigate();
-  const { data: me, isPending } = useQuery({
+  const { data: me, isPending, isError, refetch } = useQuery({
     queryKey: QUERY_KEYS.me(),
     queryFn: () => api.get<UserMe>('/users/me').then((r) => r.data),
   });
@@ -58,7 +58,21 @@ export function ProfilePage() {
     );
   }
 
-  if (!me) return null;
+  // Error state (WR-02): never render a blank page — keep Retry and the
+  // Sign Out escape hatch reachable even when GET /users/me fails.
+  if (isError || !me) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-16 px-4 text-center">
+        <p className="text-sm text-muted-foreground">Couldn&apos;t load your profile.</p>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>
+          Retry
+        </Button>
+        <Button variant="ghost" size="sm" onClick={handleSignOut}>
+          Sign Out
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 pb-16 max-w-md mx-auto space-y-6">
