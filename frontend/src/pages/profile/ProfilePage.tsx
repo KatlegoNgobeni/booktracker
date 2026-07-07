@@ -45,6 +45,11 @@ export function ProfilePage() {
 
   function handleSignOut() {
     localStorage.removeItem(TOKEN_KEY);
+    // WR-03: purge SW-cached authenticated API responses so the next user on
+    // this device cannot read shelf/profile/feed data from Cache Storage.
+    if ('caches' in window) {
+      void caches.delete('api-cache').catch(() => {});
+    }
     navigate('/login', { replace: true });
   }
 

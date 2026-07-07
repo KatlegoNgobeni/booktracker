@@ -27,7 +27,12 @@ export default defineConfig({
       workbox: {
         runtimeCaching: [
           {
-            urlPattern: /\/api\/.*/i,
+            // WR-03: same-origin only — an unanchored /\/api\/.*/ regex would
+            // match any third-party origin whose URL contains '/api/'.
+            // Note: 'api-cache' is purged on sign-out (ProfilePage.handleSignOut)
+            // because it stores authenticated personal responses.
+            urlPattern: ({ sameOrigin, url }) =>
+              sameOrigin && url.pathname.startsWith('/api/'),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
