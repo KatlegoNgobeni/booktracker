@@ -63,7 +63,7 @@ export function StatsPage() {
             <p className="text-base font-semibold">
               {stats.booksReadThisYear} of {stats.goalTarget} books this year
             </p>
-            <Progress value={progressPercent} className="h-3" />
+            <Progress value={progressPercent} className="h-3 [&>[data-slot=progress-indicator]]:bg-accent" />
             <p className="text-sm text-muted-foreground">
               {progressPercent.toFixed(0)}% complete
             </p>
@@ -132,9 +132,9 @@ export function StatsPage() {
         <h2 className="text-xl font-semibold mb-3">This Year</h2>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-            <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+            <XAxis dataKey="month" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} />
             <Tooltip />
-            <Bar dataKey="books" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="books" fill="var(--chart-1)" radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </section>

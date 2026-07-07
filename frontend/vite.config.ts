@@ -16,7 +16,7 @@ export default defineConfig({
         name: 'BookTracker',
         short_name: 'Books',
         description: 'Your personal reading tracker',
-        theme_color: '#475569',
+        theme_color: '#ffffff',
         display: 'standalone',
         start_url: '/',
         icons: [

@@ -42,7 +42,7 @@ function ShelfEntryCard({
           key={entry.coverId ?? entry.olKey}
           coverId={entry.coverId}
           title={entry.title}
-          className="w-12 h-16 rounded object-cover flex-shrink-0"
+          className="aspect-[2/3] w-12 object-cover rounded-md flex-shrink-0"
         />
 
         <div className="flex flex-col justify-center gap-1 min-w-0">
@@ -79,7 +79,7 @@ function CurrentlyReadingInfo({ entry }: { entry: ShelfEntry }) {
     );
     return (
       <div className="flex flex-col gap-1">
-        <Progress value={progress} className="h-1.5" />
+        <Progress value={progress} className="h-1.5 [&>[data-slot=progress-indicator]]:bg-accent" />
         <p className="text-xs text-muted-foreground">
           {entry.currentPage ?? 0} / {entry.pageCount} pages
         </p>

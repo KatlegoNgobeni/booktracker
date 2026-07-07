@@ -3,8 +3,8 @@
  *
  * Behaviors tested:
  * 1. ProfilePage renders displayName and email from GET /users/me
- * 2. Toggling the dark mode switch adds/removes the `dark` class on document.documentElement
- *    and writes booktracker_theme to localStorage
+ * 2. ProfilePage no longer renders a dark mode switch (Phase 11 D-05 — theme is
+ *    controlled globally from the AppHeader toggle; see AppHeader.test.tsx / useTheme.test.ts)
  * 3. Sign Out removes booktracker_token and navigates to /login
  *
  * Mocking strategy:
@@ -12,7 +12,7 @@
  * - jsdom localStorage is used directly
  * - useNavigate mocked via MemoryRouter
  *
- * D-08: no profile editing — only identity display, theme toggle, sign out
+ * D-08: no profile editing — only identity display and sign out
  * TOKEN_KEY = 'booktracker_token'
  * THEME_KEY = 'booktracker_theme'
  */
@@ -82,32 +82,17 @@ describe('ProfilePage', () => {
     expect(screen.getByText('reader@example.com')).toBeInTheDocument();
   });
 
-  it('Test 2: toggling dark mode switch adds/removes dark class and persists to localStorage', async () => {
-    const { user } = renderProfilePage();
+  it('Test 2: does not render a dark mode switch (theme is controlled from AppHeader, D-05)', async () => {
+    renderProfilePage();
 
     // Wait for profile to load
     await waitFor(() =>
       expect(screen.getByText('Avid Reader')).toBeInTheDocument(),
     );
 
-    // Find the dark mode switch
-    const darkSwitch = screen.getByRole('switch', { name: /dark mode/i });
-
-    // Initially light (localStorage empty → default is 'light')
-    expect(document.documentElement.classList.contains('dark')).toBe(false);
-    expect(localStorage.getItem('booktracker_theme')).not.toBe('dark');
-
-    // Toggle ON → dark
-    await user.click(darkSwitch);
-
-    expect(document.documentElement.classList.contains('dark')).toBe(true);
-    expect(localStorage.getItem('booktracker_theme')).toBe('dark');
-
-    // Toggle OFF → light
-    await user.click(darkSwitch);
-
-    expect(document.documentElement.classList.contains('dark')).toBe(false);
-    expect(localStorage.getItem('booktracker_theme')).toBe('light');
+    // The Preferences section and its switch were removed in Phase 11 Plan 02
+    expect(screen.queryByRole('switch', { name: /dark mode/i })).toBeNull();
+    expect(screen.queryByText(/preferences/i)).toBeNull();
   });
 
   it('Test 3: Sign Out clears booktracker_token and navigates to /login', async () => {

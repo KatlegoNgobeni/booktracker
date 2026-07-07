@@ -1,11 +1,12 @@
 /**
- * ProfilePage.tsx — User identity, dark mode toggle, and sign out (D-03/D-08)
+ * ProfilePage.tsx — User identity and sign out (D-03/D-08)
  *
  * No profile editing in MVP (D-08: no PATCH /users/me endpoint exists).
  * Elements:
  *  - Avatar (shadcn) + displayName + email from GET /users/me
- *  - Dark mode Switch (shadcn) using useTheme() hook
  *  - "Sign Out" button — clears booktracker_token + navigates to /login
+ *
+ * Dark mode is controlled globally from the AppHeader toggle (Phase 11 D-05).
  *
  * T-06-12: Only authenticated user's own /users/me is shown (server scopes to token subject)
  * TOKEN_KEY imported from api.ts — single source of truth for localStorage key name
@@ -15,11 +16,8 @@ import { useNavigate } from 'react-router-dom';
 import { api, TOKEN_KEY } from '../../lib/api';
 import { QUERY_KEYS } from '../../lib/queryKeys';
 import { usePublicProfile } from '../../hooks/useSocial';
-import { useTheme } from '../../hooks/useTheme';
 import { Avatar, AvatarFallback } from '../../components/ui/avatar';
 import { Button } from '../../components/ui/button';
-import { Switch } from '../../components/ui/switch';
-import { Label } from '../../components/ui/label';
 import { Separator } from '../../components/ui/separator';
 
 interface UserMe {
@@ -39,7 +37,6 @@ function getInitials(name: string): string {
 
 export function ProfilePage() {
   const navigate = useNavigate();
-  const { theme, toggle } = useTheme();
   const { data: me, isPending } = useQuery({
     queryKey: QUERY_KEYS.me(),
     queryFn: () => api.get<UserMe>('/users/me').then((r) => r.data),
@@ -83,26 +80,6 @@ export function ProfilePage() {
           </div>
         )}
       </div>
-
-      <Separator />
-
-      {/* ── Settings ── */}
-      <section aria-label="Settings">
-        <h2 className="text-base font-semibold mb-3">Preferences</h2>
-
-        {/* Dark mode toggle */}
-        <div className="flex items-center justify-between py-2">
-          <Label htmlFor="dark-mode-switch" className="text-sm cursor-pointer">
-            Dark mode
-          </Label>
-          <Switch
-            id="dark-mode-switch"
-            aria-label="Dark mode"
-            checked={theme === 'dark'}
-            onCheckedChange={toggle}
-          />
-        </div>
-      </section>
 
       <Separator />
 
