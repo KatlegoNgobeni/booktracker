@@ -8,6 +8,12 @@
  * 2. no localStorage + OS prefers dark → initial theme is 'dark'
  * 3. no localStorage + OS does not prefer dark → initial theme is 'light'
  * 4. toggle() flips theme, updates documentElement classList, writes localStorage
+ *
+ * colorScheme sync (per 11-03-PLAN.md Task 2 behavior): the index.html FOUC
+ * bootstrap sets an INLINE style.colorScheme, which outranks the .dark CSS
+ * rule — useTheme's theme effect must re-sync it on every theme change.
+ * 5. no stored key + OS prefers dark → style.colorScheme is 'dark' on mount
+ * 6. OS light → mount 'light'; each toggle() flips style.colorScheme
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
@@ -36,6 +42,7 @@ beforeEach(() => {
   vi.unstubAllGlobals();
   localStorage.clear();
   document.documentElement.classList.remove('light', 'dark');
+  document.documentElement.style.colorScheme = '';
 });
 
 describe('useTheme', () => {
@@ -79,5 +86,30 @@ describe('useTheme', () => {
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     expect(document.documentElement.classList.contains('light')).toBe(false);
     expect(localStorage.getItem(THEME_KEY)).toBe('dark');
+  });
+
+  it('syncs style.colorScheme to dark on mount when localStorage is unset and OS prefers dark', () => {
+    stubMatchMedia(true);
+
+    renderHook(() => useTheme());
+
+    expect(document.documentElement.style.colorScheme).toBe('dark');
+  });
+
+  it('re-syncs style.colorScheme on every toggle()', () => {
+    stubMatchMedia(false);
+
+    const { result } = renderHook(() => useTheme());
+    expect(document.documentElement.style.colorScheme).toBe('light');
+
+    act(() => {
+      result.current.toggle();
+    });
+    expect(document.documentElement.style.colorScheme).toBe('dark');
+
+    act(() => {
+      result.current.toggle();
+    });
+    expect(document.documentElement.style.colorScheme).toBe('light');
   });
 });
