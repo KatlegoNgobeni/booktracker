@@ -4,13 +4,23 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Native color-scheme fallback (UI-08 defense in depth): before any script
+         runs or CSS arrives, the UA canvas honors the OS preference natively —
+         this kills the light flash when parse-time matchMedia loses the race.
+         Must appear BEFORE the FOUC script, which then pins the APP-resolved value. -->
+    <meta name="color-scheme" content="light dark" />
     <!-- Single non-media theme-color tag: updated dynamically by the FOUC script
          below and by useTheme's effect so the status bar tracks the APP theme
          (localStorage-first), not the OS preference (WR-04). Dark value #0a0a0a
          matches the dark --background token oklch(0.145 0 0). -->
     <meta name="theme-color" content="#ffffff" />
     <!-- FOUC bootstrap (UI-03/UI-08): applies .dark synchronously before React mounts.
-         Key MUST match useTheme THEME_KEY ('booktracker_theme'). Plain script, NOT type="module". -->
+         Key MUST match useTheme THEME_KEY ('booktracker_theme'). Plain script, NOT type="module".
+         Also pins document.documentElement.style.colorScheme to the APP-resolved theme
+         (localStorage-first), overriding the meta color-scheme's OS-derived UA canvas —
+         e.g. stored 'light' + OS dark would otherwise paint a dark native canvas.
+         This inline style outranks the .dark CSS rule, so useTheme re-syncs it on
+         every theme change (UI-08, WR-04). -->
     <script>
       (function () {
         var stored = localStorage.getItem('booktracker_theme');
@@ -18,6 +28,7 @@
         if (dark) {
           document.documentElement.classList.add('dark');
         }
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
         var meta = document.querySelector('meta[name="theme-color"]:not([media])');
         if (meta) {
           meta.setAttribute('content', dark ? '#0a0a0a' : '#ffffff');
