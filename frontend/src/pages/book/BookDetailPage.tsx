@@ -7,7 +7,7 @@
  * - T-06-05: description rendered as React text node — dangerouslySetInnerHTML is NEVER used
  * - Page count only shown when not null
  *
- * Route: /books/:olKey (olKey is URL-encoded — decodeURIComponent applied on read)
+ * Route: /books/:olKey (React Router v6 decodes the param — no manual decode)
  */
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -31,8 +31,10 @@ export function BookDetailPage() {
   const { olKey: encodedOlKey } = useParams<{ olKey: string }>();
   const navigate = useNavigate();
 
-  // React Router v6 auto-decodes URL params; decodeURIComponent is safe to call again
-  const olKey = decodeURIComponent(encodedOlKey ?? '');
+  // React Router v6 already decodes route params — do NOT decode again.
+  // A second decodeURIComponent throws URIError on any stray '%' (CR-01) and
+  // is semantically wrong for olKeys legitimately containing '%'.
+  const olKey = encodedOlKey ?? '';
 
   const { data: book, isPending, isError } = useBookDetail(olKey);
   const addToShelf = useAddToShelf();
