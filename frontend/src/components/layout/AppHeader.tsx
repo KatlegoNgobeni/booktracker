@@ -15,11 +15,12 @@
  * - T-09-20: subscription to /user/queue/notifications is user-scoped via STOMP principal.
  */
 import { useState } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Sun, Moon } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { TOKEN_KEY } from '../../lib/api';
 import { QUERY_KEYS } from '../../lib/queryKeys';
 import { useUnreadCount, useMarkAllRead } from '../../hooks/useNotifications';
+import { useTheme } from '../../hooks/useTheme';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { NotificationSheet } from './NotificationSheet';
 import type { NotificationDto } from '../../types/api.types';
@@ -30,6 +31,7 @@ export function AppHeader() {
   const queryClient = useQueryClient();
   const { data: unreadCount = 0 } = useUnreadCount();
   const { mutate: markAllRead, isPending: markAllReadPending } = useMarkAllRead();
+  const { theme, toggle } = useTheme();
 
   /**
    * Called by useWebSocket for each pushed notification (NOTIF-02).
@@ -78,24 +80,39 @@ export function AppHeader() {
     <>
       {/* Sticky top bar — h-12 (48px) as specified in UI-SPEC section 1 */}
       <header className="sticky top-0 z-40 flex h-12 items-center justify-between border-b bg-background px-4">
-        <span className="text-sm font-medium text-foreground">BookTracker</span>
+        <span className="text-sm font-semibold text-foreground">BookTracker</span>
 
-        {/* Bell button with relative positioning for badge overlay */}
-        <button
-          aria-label="Notifications"
+        <div className="flex items-center gap-1">
+          {/* Dark-mode toggle — Sun shown in dark mode, Moon in light (UI-02, 44x44 hit area) */}
+          <button
+            aria-label="Toggle dark mode"
+            className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            onClick={toggle}
+          >
+            {theme === 'dark' ? (
+              <Sun className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Moon className="h-5 w-5" aria-hidden="true" />
+            )}
+          </button>
+
+          {/* Bell button with relative positioning for badge overlay */}
+          <button
+            aria-label="Notifications"
           className="relative flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-          disabled={markAllReadPending}
-          onClick={handleBellClick}
-        >
-          <Bell className="h-5 w-5" aria-hidden="true" />
+            disabled={markAllReadPending}
+            onClick={handleBellClick}
+          >
+            <Bell className="h-5 w-5" aria-hidden="true" />
 
-          {/* Unread badge — only rendered when count > 0 (UI-SPEC section 1) */}
-          {unreadCount > 0 && (
-            <span className="absolute -right-1 -top-1 flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground">
-              {unreadCount > 99 ? '99+' : unreadCount}
-            </span>
-          )}
-        </button>
+            {/* Unread badge — only rendered when count > 0 (UI-SPEC section 1) */}
+            {unreadCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex min-w-[18px] h-[18px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
       </header>
 
       {/* Bottom-sheet inbox — rendered outside the header via Sheet portal */}
