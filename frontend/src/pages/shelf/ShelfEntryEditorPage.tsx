@@ -80,7 +80,7 @@ export function ShelfEntryEditorPage() {
 
     if (status === 403) {
       return (
-        <div className="flex flex-col items-center gap-4 px-4 pt-16 text-center">
+        <div className="flex flex-col items-center gap-4 pt-16 text-center">
           <p className="text-base font-semibold">
             You don&apos;t have access to this entry.
           </p>
@@ -93,7 +93,7 @@ export function ShelfEntryEditorPage() {
 
     // Generic load error
     return (
-      <div className="flex flex-col items-center gap-3 px-4 pt-16 text-center">
+      <div className="flex flex-col items-center gap-3 pt-16 text-center">
         <p className="text-sm text-muted-foreground">
           Couldn&apos;t load this entry. Try again.
         </p>
@@ -107,7 +107,7 @@ export function ShelfEntryEditorPage() {
   // ──── Skeleton while loading ──────────────────────────
   if (entryQuery.isPending) {
     return (
-      <div className="flex flex-col gap-4 px-4 pt-4">
+      <div className="flex flex-col gap-4 pt-4">
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="h-10 rounded bg-muted animate-pulse" />
         ))}
@@ -221,7 +221,7 @@ function EditorForm({
   }
 
   return (
-    <div className="flex flex-col gap-6 px-4 pt-4 pb-8">
+    <div className="flex flex-col gap-6 pt-4 pb-8">
       {/* Header */}
       <div>
         <h1 className="text-xl font-semibold leading-tight">{entry.title}</h1>

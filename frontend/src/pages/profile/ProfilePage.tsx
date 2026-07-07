@@ -55,7 +55,7 @@ export function ProfilePage() {
 
   if (isPending) {
     return (
-      <div className="p-4 space-y-4">
+      <div className="space-y-4">
         <div className="h-16 w-16 rounded-full bg-muted animate-pulse mx-auto" />
         <div className="h-6 bg-muted animate-pulse rounded w-40 mx-auto" />
         <div className="h-4 bg-muted animate-pulse rounded w-56 mx-auto" />
@@ -80,7 +80,7 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="p-4 pb-16 max-w-md mx-auto space-y-6">
+    <div className="pb-16 space-y-6">
       {/* ── Identity ── */}
       <div className="flex flex-col items-center gap-3 pt-4">
         <Avatar className="h-16 w-16">

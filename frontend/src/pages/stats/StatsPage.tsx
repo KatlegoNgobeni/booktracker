@@ -28,7 +28,7 @@ export function StatsPage() {
 
   if (isPending) {
     return (
-      <div className="p-4 space-y-4">
+      <div className="space-y-4">
         <div className="h-24 bg-muted animate-pulse rounded-lg" />
         <div className="h-48 bg-muted animate-pulse rounded-lg" />
         <div className="h-32 bg-muted animate-pulse rounded-lg" />
@@ -53,7 +53,7 @@ export function StatsPage() {
   }
 
   return (
-    <div className="p-4 pb-16 space-y-6 max-w-md mx-auto">
+    <div className="pb-16 space-y-6">
       {/* ── Section 1: Goal Progress ── */}
       <section aria-label="Yearly reading goal">
         <h2 className="text-xl font-semibold mb-3">Reading Goal</h2>

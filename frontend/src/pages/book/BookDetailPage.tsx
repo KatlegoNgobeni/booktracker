@@ -60,7 +60,7 @@ export function BookDetailPage() {
   // Loading skeleton
   if (isPending) {
     return (
-      <div className="p-4 max-w-md mx-auto animate-pulse">
+      <div className="animate-pulse">
         <div className="h-4 bg-muted rounded w-16 mb-4" />
         <div className="flex gap-4 mb-6">
           <div className="w-28 h-40 bg-muted rounded flex-shrink-0" />
@@ -92,7 +92,7 @@ export function BookDetailPage() {
   }
 
   return (
-    <div className="p-4 max-w-md mx-auto pb-16">
+    <div className="pb-16">
       {/* Back navigation */}
       <button
         onClick={() => navigate(-1)}

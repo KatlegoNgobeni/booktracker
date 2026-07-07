@@ -206,7 +206,7 @@ function ShelfEmptyState({ status }: { status: ShelfStatus }) {
 
 export function ShelfPage() {
   return (
-    <div className="px-4 pt-4 pb-4">
+    <div className="pb-4">
       <h1 className="text-xl font-semibold mb-4">My Shelf</h1>
 
       <Tabs defaultValue="WANT_TO_READ">

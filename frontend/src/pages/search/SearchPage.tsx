@@ -108,7 +108,7 @@ export function SearchPage() {
   };
 
   return (
-    <div className="p-4 pb-16">
+    <div className="pb-16">
       {/* Tab bar — Books / People */}
       <Tabs
         value={activeTab}

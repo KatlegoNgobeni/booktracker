@@ -99,7 +99,7 @@ export function FeedPage() {
 
   if (isPending) {
     return (
-      <div className="px-4 pt-4 flex flex-col gap-3">
+      <div className="flex flex-col gap-3">
         {[1, 2, 3].map((i) => (
           <div
             key={i}
@@ -125,7 +125,7 @@ export function FeedPage() {
   }
 
   return (
-    <div className="px-4 pt-4 pb-4">
+    <div className="pb-4">
       {/* D-10: hidden when no pending requests; returns null when empty */}
       <PendingRequestsWidget />
       <h1 className="text-xl font-semibold mb-3">Feed</h1>

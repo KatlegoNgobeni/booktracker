@@ -48,7 +48,7 @@ function ProfileHeader({
   showFollowButton: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-3 px-4 pt-4 pb-3 border-b">
+    <div className="flex flex-col gap-3 pb-3 border-b">
       <div className="flex items-start justify-between gap-3">
         <h1 className="text-xl font-semibold leading-tight">{displayName}</h1>
         {showFollowButton && (
@@ -155,7 +155,7 @@ export function UserPublicProfilePage() {
 
   if (isPending) {
     return (
-      <div className="px-4 pt-4">
+      <div>
         <div className="h-32 rounded-lg bg-muted animate-pulse mb-4" aria-label="Loading profile" />
         <div className="grid grid-cols-3 gap-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -195,7 +195,7 @@ export function UserPublicProfilePage() {
         showFollowButton={showFollowButton}
       />
 
-      <div className="px-4 pt-4">
+      <div>
         {readEntries.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">
             No finished books yet.
