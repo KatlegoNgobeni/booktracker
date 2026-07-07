@@ -30,7 +30,7 @@ export function BookCoverImage({ coverId, title, className }: Props) {
   if (imgFailed || !coverId) {
     return (
       <div
-        className={`flex items-center justify-center text-white font-bold text-lg ${className ?? ''}`}
+        className={`flex items-center justify-center text-white font-semibold text-xl ${className ?? ''}`}
         style={{ background: `hsl(${hue}, 60%, 40%)` }}
         aria-label={title}
       >

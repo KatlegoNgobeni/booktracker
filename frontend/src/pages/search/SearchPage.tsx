@@ -194,7 +194,7 @@ export function SearchPage() {
                         key={book.coverId ?? book.olKey}
                         coverId={book.coverId}
                         title={book.title}
-                        className="w-16 h-24 object-cover rounded flex-shrink-0"
+                        className="aspect-[2/3] w-16 object-cover rounded-md flex-shrink-0"
                       />
                       <div className="min-w-0">
                         <p className="text-base font-semibold line-clamp-2">

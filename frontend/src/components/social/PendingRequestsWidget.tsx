@@ -53,7 +53,7 @@ function PendingRequestRow({
         <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
       </Avatar>
       <p className="flex-1 text-sm text-foreground min-w-0 truncate">
-        <strong className="font-medium">{displayName}</strong>
+        <strong className="font-semibold">{displayName}</strong>
         {' '}wants to be your friend
       </p>
       <div className="flex gap-2 shrink-0">

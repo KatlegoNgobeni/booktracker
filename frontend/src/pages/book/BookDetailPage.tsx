@@ -107,7 +107,7 @@ export function BookDetailPage() {
           key={book.coverId ?? book.olKey}
           coverId={book.coverId}
           title={book.title}
-          className="w-28 h-40 object-cover rounded shadow-sm flex-shrink-0"
+          className="aspect-[2/3] w-28 object-cover rounded-md shadow-sm flex-shrink-0"
         />
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-semibold leading-tight">{book.title}</h1>
@@ -151,7 +151,7 @@ export function BookDetailPage() {
         ) : (
           /* D-15: Not on shelf — show 3 add buttons */
           <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">Add to shelf</p>
+            <p className="text-sm font-normal text-muted-foreground">Add to shelf</p>
             {ADD_STATUSES.map((status) => (
               <Button
                 key={status}

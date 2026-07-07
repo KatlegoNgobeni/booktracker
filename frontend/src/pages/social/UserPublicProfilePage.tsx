@@ -109,7 +109,7 @@ function ReadBookCard({
           key={entry.coverId ?? entry.olKey}
           coverId={entry.coverId}
           title={entry.title}
-          className="w-full aspect-[2/3] rounded object-cover"
+          className="w-full aspect-[2/3] object-cover rounded-md"
         />
       </Link>
       {entry.rating !== null && (

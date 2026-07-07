@@ -34,7 +34,7 @@ function FeedItemCard({ item }: { item: FeedItem }) {
           key={item.bookCoverId ?? item.bookOlKey}
           coverId={item.bookCoverId}
           title={item.bookTitle}
-          className="w-12 h-16 rounded object-cover"
+          className="aspect-[2/3] w-12 object-cover rounded-md"
         />
       </Link>
 
