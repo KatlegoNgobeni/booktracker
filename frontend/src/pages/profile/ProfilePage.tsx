@@ -3,7 +3,7 @@
  *
  * No profile editing in MVP (D-08: no PATCH /users/me endpoint exists).
  * Elements:
- *  - Avatar (shadcn) + displayName + email from GET /users/me
+ *  - UserAvatar (shared, AVATAR-01) + displayName + email from GET /users/me via useCurrentUser
  *  - "Sign Out" button — clears booktracker_token + navigates to /login
  *
  * Dark mode is controlled globally from the AppHeader toggle (Phase 11 D-05).
@@ -11,37 +11,19 @@
  * T-06-12: Only authenticated user's own /users/me is shown (server scopes to token subject)
  * TOKEN_KEY imported from api.ts — single source of truth for localStorage key name
  */
-import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { api, TOKEN_KEY } from '../../lib/api';
-import { QUERY_KEYS } from '../../lib/queryKeys';
+import { TOKEN_KEY } from '../../lib/api';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { usePublicProfile } from '../../hooks/useSocial';
-import { Avatar, AvatarFallback } from '../../components/ui/avatar';
+import { UserAvatar } from '../../components/shared/UserAvatar';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { Separator } from '../../components/ui/separator';
 
-interface UserMe {
-  id: string;
-  email: string;
-  displayName: string;
-  createdAt: string;
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map((n) => n.charAt(0).toUpperCase())
-    .slice(0, 2)
-    .join('');
-}
-
 export function ProfilePage() {
   const navigate = useNavigate();
-  const { data: me, isPending, isError, refetch } = useQuery({
-    queryKey: QUERY_KEYS.me(),
-    queryFn: () => api.get<UserMe>('/users/me').then((r) => r.data),
-  });
+  // AVATAR-06 dedupe: same QUERY_KEYS.me() cache entry as AppHeader — one fetch app-wide.
+  const { data: me, isPending, isError, refetch } = useCurrentUser();
   const { data: socialProfile } = usePublicProfile(me?.id ?? '');
 
   function handleSignOut() {
@@ -86,11 +68,13 @@ export function ProfilePage() {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col items-center gap-3">
-            <Avatar className="h-16 w-16">
-              <AvatarFallback className="text-xl font-semibold">
-                {getInitials(me.displayName)}
-              </AvatarFallback>
-            </Avatar>
+            {/* AVATAR-01: generated avatar at the existing 64px footprint (UI-SPEC size map) */}
+            <UserAvatar
+              userId={me.id}
+              displayName={me.displayName}
+              className="h-16 w-16"
+              fallbackClassName="text-xl font-semibold"
+            />
             <div className="text-center">
               <p className="text-xl font-semibold">{me.displayName}</p>
               <p className="text-sm text-muted-foreground">{me.email}</p>

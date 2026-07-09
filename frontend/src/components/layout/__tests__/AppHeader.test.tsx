@@ -7,11 +7,13 @@
  * 3. Clicking the bell calls the mark-all-read mutation
  * 4. Theme toggle button renders with aria-label "Toggle dark mode" (UI-02, 11-01)
  * 5. Toggle shows Sun icon when theme is dark, Moon icon when theme is light (11-01)
+ * 6. Header identity shows the signed-in user's display name + avatar fallback (AVATAR-06, 12-05)
  *
  * Mocking strategy:
  * - useNotifications module mocked in full (hooks return controlled values)
  * - useWebSocket mocked as a no-op (STOMP/SockJS irrelevant for these tests)
  * - useTheme mocked so theme/toggle are controllable per test
+ * - useCurrentUser mocked so header identity is controllable (12-05)
  * - QueryClientProvider wraps the render for useQueryClient() inside AppHeader
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -21,6 +23,7 @@ import { AppHeader } from '../AppHeader';
 import * as useNotificationsModule from '../../../hooks/useNotifications';
 import * as useWebSocketModule from '../../../hooks/useWebSocket';
 import * as useThemeModule from '../../../hooks/useTheme';
+import * as useCurrentUserModule from '../../../hooks/useCurrentUser';
 
 // Mock the entire notification hooks module
 vi.mock('../../../hooks/useNotifications', () => ({
@@ -37,6 +40,11 @@ vi.mock('../../../hooks/useWebSocket', () => ({
 // Mock the theme hook so theme value and toggle are controllable (11-01)
 vi.mock('../../../hooks/useTheme', () => ({
   useTheme: vi.fn(),
+}));
+
+// Mock the identity hook so header identity is controllable (AVATAR-06, 12-05)
+vi.mock('../../../hooks/useCurrentUser', () => ({
+  useCurrentUser: vi.fn(),
 }));
 
 const mockMarkAllRead = vi.fn();
@@ -66,6 +74,16 @@ beforeEach(() => {
     theme: 'light',
     toggle: mockToggle,
   });
+
+  // Default: signed-in identity resolved (AVATAR-06)
+  vi.mocked(useCurrentUserModule.useCurrentUser).mockReturnValue({
+    data: {
+      id: 'user-1',
+      email: 'reader@example.com',
+      displayName: 'Avid Reader',
+      createdAt: '2024-01-01T00:00:00Z',
+    },
+  } as ReturnType<typeof useCurrentUserModule.useCurrentUser>);
 
   // Default: mark-all-read mutation (idle)
   vi.mocked(useNotificationsModule.useMarkAllRead).mockReturnValue({
@@ -169,5 +187,32 @@ describe('AppHeader', () => {
     const lightToggle = screen.getByRole('button', { name: /toggle dark mode/i });
     expect(lightToggle.querySelector('svg.lucide-moon')).not.toBeNull();
     expect(lightToggle.querySelector('svg.lucide-sun')).toBeNull();
+  });
+
+  it('shows the display name and avatar fallback in the header identity slot (AVATAR-06)', () => {
+    vi.mocked(useNotificationsModule.useUnreadCount).mockReturnValue({
+      data: 0,
+    } as ReturnType<typeof useNotificationsModule.useUnreadCount>);
+
+    renderHeader();
+
+    // Display name text renders beside the avatar
+    expect(screen.getByText('Avid Reader')).toBeInTheDocument();
+    // jsdom never fires image load, so radix renders the initials fallback ("AR")
+    expect(screen.getByText('AR')).toBeInTheDocument();
+  });
+
+  it('renders no identity text while useCurrentUser is pending (AVATAR-06 loading state)', () => {
+    vi.mocked(useNotificationsModule.useUnreadCount).mockReturnValue({
+      data: 0,
+    } as ReturnType<typeof useNotificationsModule.useUnreadCount>);
+    vi.mocked(useCurrentUserModule.useCurrentUser).mockReturnValue({
+      data: undefined,
+    } as ReturnType<typeof useCurrentUserModule.useCurrentUser>);
+
+    renderHeader();
+
+    expect(screen.queryByText('Avid Reader')).not.toBeInTheDocument();
+    expect(screen.queryByText('AR')).not.toBeInTheDocument();
   });
 });

@@ -20,9 +20,11 @@ import { useQueryClient } from '@tanstack/react-query';
 import { TOKEN_KEY } from '../../lib/api';
 import { QUERY_KEYS } from '../../lib/queryKeys';
 import { useUnreadCount, useMarkAllRead } from '../../hooks/useNotifications';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { useTheme } from '../../hooks/useTheme';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { NotificationSheet } from './NotificationSheet';
+import { UserAvatar } from '../shared/UserAvatar';
 import type { NotificationDto } from '../../types/api.types';
 
 export function AppHeader() {
@@ -31,6 +33,7 @@ export function AppHeader() {
   const queryClient = useQueryClient();
   const { data: unreadCount = 0 } = useUnreadCount();
   const { mutate: markAllRead, isPending: markAllReadPending } = useMarkAllRead();
+  const { data: me } = useCurrentUser();
   const { theme, toggle } = useTheme();
 
   /**
@@ -80,7 +83,19 @@ export function AppHeader() {
     <>
       {/* Sticky top bar — h-12 (48px) as specified in UI-SPEC section 1 */}
       <header className="sticky top-0 z-40 flex h-12 items-center justify-between border-b bg-background px-4">
-        <span className="text-sm font-semibold text-foreground">BookTracker</span>
+        {/* Identity — avatar + display name via shared useCurrentUser (AVATAR-06).
+            While the query is pending the slot stays empty; the fixed h-12 row
+            height guarantees zero layout jump when identity resolves (UI-SPEC 2). */}
+        <div className="flex items-center gap-2 min-w-0">
+          {me && (
+            <>
+              <UserAvatar userId={me.id} displayName={me.displayName} size="sm" />
+              <span className="text-sm font-semibold text-foreground truncate">
+                {me.displayName}
+              </span>
+            </>
+          )}
+        </div>
 
         <div className="flex items-center gap-1">
           {/* Dark-mode toggle — Sun shown in dark mode, Moon in light (UI-02, 44x44 hit area) */}
