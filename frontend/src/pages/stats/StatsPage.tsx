@@ -151,7 +151,27 @@ export function StatsPage() {
         </Card>
       </section>
 
-      {/* ── Section 3: Secondary Stats ── */}
+      {/* ── Section 3: Reading Streaks (STATS-01/02) ── */}
+      {/* Always renders — 0 is a normal value, never an error or hidden card (STATS-06) */}
+      <section aria-label="Reading streaks">
+        <h2 className="text-xl font-semibold mb-3">Streaks</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-[28px] font-semibold">{stats.currentStreakDays}</p>
+              <p className="text-sm text-muted-foreground">Current streak (days)</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-[28px] font-semibold">{stats.longestStreakDays}</p>
+              <p className="text-sm text-muted-foreground">Longest streak (days)</p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* ── Section 4: Secondary Stats ── */}
       <section aria-label="Reading statistics">
         <h2 className="text-xl font-semibold mb-3">All Time</h2>
 
