@@ -89,8 +89,11 @@ describe('BookDetailPage', () => {
       rating: null,
       review: null,
       currentPage: null,
+      pageCount: null,
       dateStarted: null,
       dateFinished: null,
+      lastReadDate: null,
+      estimatedFinishDate: null,
       createdAt: '2024-01-15T10:00:00+02:00',
     };
     const shelfPage: Page<ShelfEntry> = {

@@ -21,6 +21,36 @@ import { useShelfList } from '../../hooks/useShelf';
 import type { ShelfEntry, ShelfStatus } from '../../types/api.types';
 
 // ────────────────────────────────────────────────────────
+// Pace projection date formatting (STATS-04)
+// ────────────────────────────────────────────────────────
+
+/**
+ * Format an ISO LocalDate (YYYY-MM-DD) estimated finish date for the shelf-card caption.
+ * - Equal to today's local date → "today"
+ * - Same year as today → "24 Jul"
+ * - Different year → "12 Jan 2027"
+ *
+ * Parses via split('-') + new Date(y, m-1, d) to avoid UTC-vs-local timezone
+ * ambiguity of Date-parsing bare ISO strings. `today` is injectable for tests.
+ */
+export function formatEstimatedFinish(isoDate: string, today: Date = new Date()): string {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  if (
+    y === today.getFullYear() &&
+    m - 1 === today.getMonth() &&
+    d === today.getDate()
+  ) {
+    return 'today';
+  }
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    ...(y !== today.getFullYear() ? { year: 'numeric' as const } : {}),
+  });
+}
+
+// ────────────────────────────────────────────────────────
 // Status-specific card content (D-10)
 // ────────────────────────────────────────────────────────
 
@@ -72,6 +102,12 @@ function CurrentlyReadingInfo({ entry }: { entry: ShelfEntry }) {
   const hasPageCount =
     entry.pageCount != null && entry.pageCount > 0;
 
+  // STATS-04/05: quiet meta caption — muted, never accent/destructive (missing data is not an error)
+  const finishCaption =
+    entry.estimatedFinishDate != null
+      ? `Est. finish: ${formatEstimatedFinish(entry.estimatedFinishDate)}`
+      : 'Not enough data';
+
   if (hasPageCount) {
     const progress = Math.min(
       100,
@@ -83,20 +119,22 @@ function CurrentlyReadingInfo({ entry }: { entry: ShelfEntry }) {
         <p className="text-xs text-muted-foreground">
           {entry.currentPage ?? 0} / {entry.pageCount} pages
         </p>
+        <p className="text-xs text-muted-foreground">{finishCaption}</p>
       </div>
     );
   }
 
   // No page count — show text-only variant
-  if (entry.currentPage) {
-    return (
-      <p className="text-xs text-muted-foreground">
-        Page {entry.currentPage}
-      </p>
-    );
-  }
-
-  return null;
+  return (
+    <div className="flex flex-col gap-1">
+      {entry.currentPage ? (
+        <p className="text-xs text-muted-foreground">
+          Page {entry.currentPage}
+        </p>
+      ) : null}
+      <p className="text-xs text-muted-foreground">{finishCaption}</p>
+    </div>
+  );
 }
 
 // ────────────────────────────────────────────────────────

@@ -63,6 +63,8 @@ const sampleEntry: ShelfEntry = {
   pageCount: 310,
   dateStarted: '2024-01-01',
   dateFinished: null,
+  lastReadDate: null,
+  estimatedFinishDate: null,
   createdAt: '2024-01-01T00:00:00Z',
 };
 
