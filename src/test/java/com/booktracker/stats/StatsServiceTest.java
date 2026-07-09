@@ -1,5 +1,6 @@
 package com.booktracker.stats;
 
+import com.booktracker.activity.ReadingActivityRepository;
 import com.booktracker.books.BookEntity;
 import com.booktracker.goal.GoalEntity;
 import com.booktracker.goal.GoalRepository;
@@ -41,6 +42,9 @@ class StatsServiceTest {
     @Mock
     private GoalRepository goalRepository;
 
+    @Mock
+    private ReadingActivityRepository readingActivityRepository;
+
     private StatsService statsService;
 
     private UserEntity user;
@@ -49,7 +53,7 @@ class StatsServiceTest {
 
     @BeforeEach
     void setUp() {
-        statsService = new StatsService(shelfRepository, goalRepository);
+        statsService = new StatsService(shelfRepository, goalRepository, readingActivityRepository);
 
         user = new UserEntity();
         userId = UUID.randomUUID();
@@ -240,6 +244,49 @@ class StatsServiceTest {
     }
 
     // ----------------------------------------------------------------
+    // currentStreakDays / longestStreakDays (STATS-01, STATS-02, STATS-06)
+    // ----------------------------------------------------------------
+
+    /**
+     * STATS-01 + STATS-02: With activity on today and yesterday, getStats returns
+     * currentStreakDays 2 and longestStreakDays 2. Dates are relative to the
+     * service's injected {@code LocalDate.now()} — two consecutive days ending
+     * today always yield a live 2-day streak regardless of the wall clock.
+     */
+    @Test
+    void streaks_activityTodayAndYesterday_returnsTwoForBoth() {
+        // Arrange
+        stubDefaults();
+        LocalDate today = LocalDate.now();
+        when(readingActivityRepository.findActivityDatesDesc(userId))
+                .thenReturn(List.of(today, today.minusDays(1)));
+
+        // Act
+        StatsDto result = statsService.getStats(user);
+
+        // Assert
+        assertThat(result.getCurrentStreakDays()).isEqualTo(2);
+        assertThat(result.getLongestStreakDays()).isEqualTo(2);
+    }
+
+    /**
+     * STATS-06: With no reading activity (empty date list), getStats returns
+     * 0 for both streak fields — never null, never an error.
+     */
+    @Test
+    void streaks_noActivity_returnsZeroForBoth() {
+        // Arrange: stubDefaults already stubs findActivityDatesDesc to empty
+        stubDefaults();
+
+        // Act
+        StatsDto result = statsService.getStats(user);
+
+        // Assert
+        assertThat(result.getCurrentStreakDays()).isZero();
+        assertThat(result.getLongestStreakDays()).isZero();
+    }
+
+    // ----------------------------------------------------------------
     // Helpers
     // ----------------------------------------------------------------
 
@@ -257,6 +304,7 @@ class StatsServiceTest {
         when(shelfRepository.findReadEntriesThisYear(userId, currentYear)).thenReturn(List.of());
         when(shelfRepository.findReadEntriesWithPageCount(userId)).thenReturn(List.of());
         when(goalRepository.findByUserIdAndYear(userId, currentYear)).thenReturn(Optional.empty());
+        when(readingActivityRepository.findActivityDatesDesc(userId)).thenReturn(List.of());
     }
 
     /**

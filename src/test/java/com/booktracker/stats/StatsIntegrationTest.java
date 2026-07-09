@@ -231,6 +231,35 @@ class StatsIntegrationTest {
     }
 
     // ----------------------------------------------------------------
+    // STATS-06: streak fields present as 0 for a user with no activity
+    // ----------------------------------------------------------------
+
+    /**
+     * STATS-06: GET /api/stats for a fresh user (no reading activity) responds 200
+     * with {@code currentStreakDays: 0} and {@code longestStreakDays: 0} — the int
+     * primitives are always serialized ({@code @JsonInclude(NON_NULL)} never strips
+     * primitives), so zero renders as 0, never null, never absent, never an error.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void streakFieldsPresentAsZeroForFreshUser() {
+        ResponseEntity<Map> response = restTemplate.exchange(
+            "/api/stats", HttpMethod.GET,
+            new HttpEntity<>(bearerHeaders()),
+            Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Map<?, ?> body = response.getBody();
+        assertThat(body).isNotNull();
+
+        // Both fields must be PRESENT with value 0 (not null, not omitted)
+        assertThat(body.containsKey("currentStreakDays")).isTrue();
+        assertThat(body.containsKey("longestStreakDays")).isTrue();
+        assertThat(body.get("currentStreakDays")).isEqualTo(0);
+        assertThat(body.get("longestStreakDays")).isEqualTo(0);
+    }
+
+    // ----------------------------------------------------------------
     // Helpers
     // ----------------------------------------------------------------
 
