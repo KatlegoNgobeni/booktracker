@@ -38,6 +38,12 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  *       page_count; null if no qualifying entries (D-10)</li>
  *   <li>{@code shortestBook} — title+pageCount of the READ book with the lowest non-null
  *       page_count; null if no qualifying entries (D-10)</li>
+ *   <li>{@code currentStreakDays} — length of the current reading streak ending today or
+ *       yesterday (STATS-01); always present — int primitive, so
+ *       {@code @JsonInclude(NON_NULL)} never strips it even at 0 (STATS-06)</li>
+ *   <li>{@code longestStreakDays} — longest-ever consecutive-day reading streak (STATS-02);
+ *       always present — int primitive, same NON_NULL reasoning as
+ *       {@code booksReadAllTime} (STATS-06)</li>
  * </ul>
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -77,6 +83,18 @@ public class StatsDto {
     /** Null if no READ entries have a non-null page_count (D-10). */
     private final BookSummaryDto shortestBook;
 
+    /**
+     * Current reading streak in days, ending today or yesterday (STATS-01).
+     * Primitive int — always serialized, 0 when no live streak (STATS-06).
+     */
+    private final int currentStreakDays;
+
+    /**
+     * Longest-ever reading streak in days (STATS-02).
+     * Primitive int — always serialized, 0 when no activity (STATS-06).
+     */
+    private final int longestStreakDays;
+
     public StatsDto(long booksReadAllTime,
                     long booksReadThisYear,
                     long currentlyReadingCount,
@@ -87,7 +105,9 @@ public class StatsDto {
                     Double averageBookLength,
                     int[] booksPerMonth,
                     BookSummaryDto longestBook,
-                    BookSummaryDto shortestBook) {
+                    BookSummaryDto shortestBook,
+                    int currentStreakDays,
+                    int longestStreakDays) {
         this.booksReadAllTime = booksReadAllTime;
         this.booksReadThisYear = booksReadThisYear;
         this.currentlyReadingCount = currentlyReadingCount;
@@ -99,6 +119,8 @@ public class StatsDto {
         this.booksPerMonth = booksPerMonth;
         this.longestBook = longestBook;
         this.shortestBook = shortestBook;
+        this.currentStreakDays = currentStreakDays;
+        this.longestStreakDays = longestStreakDays;
     }
 
     public long getBooksReadAllTime() {
@@ -143,5 +165,13 @@ public class StatsDto {
 
     public BookSummaryDto getShortestBook() {
         return shortestBook;
+    }
+
+    public int getCurrentStreakDays() {
+        return currentStreakDays;
+    }
+
+    public int getLongestStreakDays() {
+        return longestStreakDays;
     }
 }

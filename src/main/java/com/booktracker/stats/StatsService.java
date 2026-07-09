@@ -1,5 +1,6 @@
 package com.booktracker.stats;
 
+import com.booktracker.activity.ReadingActivityRepository;
 import com.booktracker.goal.GoalEntity;
 import com.booktracker.goal.GoalRepository;
 import com.booktracker.shelf.ShelfRepository;
@@ -28,6 +29,9 @@ import java.util.UUID;
  *       bucketing by {@code dateFinished.getMonthValue() - 1} (D-08, D-11)</li>
  *   <li>Computing longestBook / shortestBook via stream max/min on non-null page_count
  *       entries from all years (D-10)</li>
+ *   <li>Deriving reading streaks on demand from {@code reading_activity} dates via
+ *       {@link StreakCalculator} — clock injected here, empty list → 0 in Java, no
+ *       COALESCE in the query (STATS-01/02/06)</li>
  * </ul>
  *
  * <p><strong>Transaction strategy:</strong> Annotated {@code @Transactional(readOnly = true)}
@@ -43,10 +47,14 @@ public class StatsService {
 
     private final ShelfRepository shelfRepository;
     private final GoalRepository goalRepository;
+    private final ReadingActivityRepository readingActivityRepository;
 
-    public StatsService(ShelfRepository shelfRepository, GoalRepository goalRepository) {
+    public StatsService(ShelfRepository shelfRepository,
+                        GoalRepository goalRepository,
+                        ReadingActivityRepository readingActivityRepository) {
         this.shelfRepository = shelfRepository;
         this.goalRepository = goalRepository;
+        this.readingActivityRepository = readingActivityRepository;
     }
 
     /**
@@ -103,6 +111,13 @@ public class StatsService {
                 .map(ub -> new BookSummaryDto(ub.getBook().getTitle(), ub.getBook().getPageCount()))
                 .orElse(null);
 
+        // ---- Reading streaks (STATS-01, STATS-02, STATS-06) ----
+        // Dates arrive distinct + sorted DESC (findActivityDatesDesc contract).
+        // Clock is injected at this boundary — StreakCalculator never reads the wall clock.
+        List<LocalDate> activityDates = readingActivityRepository.findActivityDatesDesc(userId);
+        int currentStreakDays = StreakCalculator.currentStreak(activityDates, LocalDate.now());
+        int longestStreakDays = StreakCalculator.longestStreak(activityDates);
+
         return new StatsDto(
                 booksReadAllTime,
                 booksReadThisYear,
@@ -114,7 +129,9 @@ public class StatsService {
                 averageBookLength,
                 booksPerMonth,
                 longestBook,
-                shortestBook
+                shortestBook,
+                currentStreakDays,
+                longestStreakDays
         );
     }
 
