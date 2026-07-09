@@ -1,5 +1,6 @@
 package com.booktracker.shelf;
 
+import com.booktracker.activity.ReadingActivityRepository;
 import com.booktracker.books.BookEntity;
 import com.booktracker.books.BookRepository;
 import com.booktracker.books.BookService;
@@ -22,6 +23,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -59,6 +61,14 @@ class ShelfServiceTest {
      */
     @Mock
     private NotificationService notificationService;
+
+    /**
+     * Plan 12-03: ShelfService now requires ReadingActivityRepository for the
+     * STATS-03 streak activity recording in updateProgress/updateMetadata/addToShelf.
+     * Mock provided so @InjectMocks wires the new constructor parameter.
+     */
+    @Mock
+    private ReadingActivityRepository readingActivityRepository;
 
     @InjectMocks
     private ShelfService shelfService;
@@ -356,6 +366,92 @@ class ShelfServiceTest {
                 .isInstanceOf(ResponseStatusException.class)
                 .satisfies(ex -> assertThat(((ResponseStatusException) ex).getStatusCode())
                         .isEqualTo(HttpStatus.FORBIDDEN));
+    }
+
+    // ----------------------------------------------------------------
+    // STATS-03: reading-activity recording (Plan 12-03)
+    // ----------------------------------------------------------------
+
+    /**
+     * STATS-03 + STATS-04: updateProgress is THE streak trigger — it must record
+     * activity for the authenticated user AND stamp lastReadDate (the pace anchor).
+     * The date is server-assigned, so any LocalDate is accepted in the verify.
+     */
+    @Test
+    void updateProgress_recordsActivityAndStampsLastReadDate() {
+        UserBookEntity entry = buildEntry(ShelfStatus.CURRENTLY_READING);
+        entry.setLastReadDate(null);
+
+        when(shelfRepository.findById(entryId)).thenReturn(Optional.of(entry));
+        when(shelfRepository.save(any(UserBookEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateProgressRequest req = new UpdateProgressRequest();
+        req.setCurrentPage(42);
+
+        shelfService.updateProgress(entryId, req, user);
+
+        verify(readingActivityRepository).recordActivity(eq(user.getId()), any(LocalDate.class));
+        assertThat(entry.getLastReadDate()).isEqualTo(LocalDate.now());
+    }
+
+    /**
+     * STATS-03: transitioning INTO READ (finishing a book) counts as reading —
+     * updateMetadata must record activity for the authenticated user.
+     * lastReadDate is NOT stamped on transitions (only updateProgress sets it).
+     */
+    @Test
+    void updateMetadata_transitionIntoRead_recordsActivity() {
+        UserBookEntity entry = buildEntry(ShelfStatus.CURRENTLY_READING);
+        entry.setLastReadDate(null);
+
+        when(shelfRepository.findById(entryId)).thenReturn(Optional.of(entry));
+        when(shelfRepository.save(any(UserBookEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateShelfRequest req = new UpdateShelfRequest();
+        req.setStatus(ShelfStatus.READ);
+
+        shelfService.updateMetadata(entryId, req, user);
+
+        verify(readingActivityRepository).recordActivity(eq(user.getId()), any(LocalDate.class));
+        assertThat(entry.getLastReadDate()).isNull();
+    }
+
+    /**
+     * STATS-03 (A5 adopted): transitioning INTO CURRENTLY_READING (starting a book)
+     * also counts as reading activity.
+     */
+    @Test
+    void updateMetadata_transitionIntoCurrentlyReading_recordsActivity() {
+        UserBookEntity entry = buildEntry(ShelfStatus.WANT_TO_READ);
+
+        when(shelfRepository.findById(entryId)).thenReturn(Optional.of(entry));
+        when(shelfRepository.save(any(UserBookEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateShelfRequest req = new UpdateShelfRequest();
+        req.setStatus(ShelfStatus.CURRENTLY_READING);
+
+        shelfService.updateMetadata(entryId, req, user);
+
+        verify(readingActivityRepository).recordActivity(eq(user.getId()), any(LocalDate.class));
+    }
+
+    /**
+     * STATS-03 (negative): a status update that is neither INTO READ nor INTO
+     * CURRENTLY_READING (here: → ABANDONED) must NOT record reading activity.
+     */
+    @Test
+    void updateMetadata_transitionIntoAbandoned_doesNotRecordActivity() {
+        UserBookEntity entry = buildEntry(ShelfStatus.CURRENTLY_READING);
+
+        when(shelfRepository.findById(entryId)).thenReturn(Optional.of(entry));
+        when(shelfRepository.save(any(UserBookEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateShelfRequest req = new UpdateShelfRequest();
+        req.setStatus(ShelfStatus.ABANDONED);
+
+        shelfService.updateMetadata(entryId, req, user);
+
+        verify(readingActivityRepository, never()).recordActivity(any(), any());
     }
 
     // ----------------------------------------------------------------

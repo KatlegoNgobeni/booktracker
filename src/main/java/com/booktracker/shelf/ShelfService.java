@@ -1,5 +1,6 @@
 package com.booktracker.shelf;
 
+import com.booktracker.activity.ReadingActivityRepository;
 import com.booktracker.books.BookEntity;
 import com.booktracker.books.BookRepository;
 import com.booktracker.books.BookService;
@@ -56,31 +57,36 @@ public class ShelfService {
     private final BookRepository bookRepository;
     private final FriendRequestRepository friendRequestRepository;
     private final NotificationService notificationService;
+    private final ReadingActivityRepository readingActivityRepository;
 
     /**
      * Constructor injection — Plan 09-04 adds FriendRequestRepository and NotificationService
-     * for the FRIEND_FINISHED_BOOK trigger in {@link #updateMetadata}.
+     * for the FRIEND_FINISHED_BOOK trigger in {@link #updateMetadata}. Plan 12-03 adds
+     * ReadingActivityRepository for streak activity recording (STATS-03).
      *
      * <p><strong>RESEARCH Pitfall 6 (circular dependency):</strong>
      * {@link NotificationService} does NOT inject {@link ShelfService} back — the trigger
      * only passes the entry {@code id} (UUID) as {@code entityId}, never a full DTO.
      *
-     * @param shelfRepository          shelf entry persistence store
-     * @param bookService              book fetch-and-cache
-     * @param bookRepository           book FK resolution
-     * @param friendRequestRepository  friend lookup for FRIEND_FINISHED_BOOK fan-out
-     * @param notificationService      notification persist+push
+     * @param shelfRepository            shelf entry persistence store
+     * @param bookService                book fetch-and-cache
+     * @param bookRepository             book FK resolution
+     * @param friendRequestRepository    friend lookup for FRIEND_FINISHED_BOOK fan-out
+     * @param notificationService        notification persist+push
+     * @param readingActivityRepository  idempotent per-day activity recording (STATS-03)
      */
     public ShelfService(ShelfRepository shelfRepository,
                         BookService bookService,
                         BookRepository bookRepository,
                         FriendRequestRepository friendRequestRepository,
-                        NotificationService notificationService) {
+                        NotificationService notificationService,
+                        ReadingActivityRepository readingActivityRepository) {
         this.shelfRepository = shelfRepository;
         this.bookService = bookService;
         this.bookRepository = bookRepository;
         this.friendRequestRepository = friendRequestRepository;
         this.notificationService = notificationService;
+        this.readingActivityRepository = readingActivityRepository;
     }
 
     /**
@@ -121,6 +127,15 @@ public class ShelfService {
         // Set dateFinished for both READ ("Date Finished") and ABANDONED ("Date Stopped").
         if (status == ShelfStatus.READ || status == ShelfStatus.ABANDONED) {
             entry.setDateFinished(LocalDate.now());
+        }
+
+        // STATS-03: adding directly as READ (finished it) or CURRENTLY_READING (started it)
+        // is a reading action — record today's activity. Mirrors the updateMetadata transition
+        // recording, same as the D-10/D-14 initial-add mirror above (addToShelf bypasses
+        // updateMetadata). Date is ALWAYS server-assigned LocalDate.now() — never from the
+        // request (anti-backfill, T-12-03). Idempotent via ON CONFLICT DO NOTHING (T-12-02).
+        if (status == ShelfStatus.READ || status == ShelfStatus.CURRENTLY_READING) {
+            readingActivityRepository.recordActivity(user.getId(), LocalDate.now());
         }
 
         try {
@@ -210,6 +225,11 @@ public class ShelfService {
         boolean wasNotRead = entry.getShelfStatus() != ShelfStatus.READ;
         boolean willBeRead = req.getStatus() == ShelfStatus.READ;
 
+        // STATS-03 (A5 adopted): starting a book counts as reading activity — capture the
+        // CURRENTLY_READING transition with the same pre-update idiom as the READ pair above.
+        boolean wasNotReading = entry.getShelfStatus() != ShelfStatus.CURRENTLY_READING;
+        boolean willBeReading = req.getStatus() == ShelfStatus.CURRENTLY_READING;
+
         if (req.getStatus() != null) {
             // D-13: auto-date logic lives here, reads old status BEFORE updating.
             applyAutoDateRules(entry, req.getStatus());
@@ -236,6 +256,12 @@ public class ShelfService {
         // Synchronous within the @Transactional method (RESEARCH Pitfall 6 / RESOLVED Open Question 1).
         // Safe no-op when each friend is not connected (RESEARCH Assumption A3).
         if (wasNotRead && willBeRead) {
+            // STATS-03: finishing a book counts as reading — record today's activity.
+            // Date is server-assigned LocalDate.now(), never client-supplied (T-12-03).
+            // lastReadDate is intentionally NOT set here — only updateProgress sets it
+            // (pace projection needs a page-progress anchor, STATS-04).
+            readingActivityRepository.recordActivity(user.getId(), LocalDate.now());
+
             List<FriendRequestEntity> acceptedRelationships =
                     friendRequestRepository.findAcceptedRelationships(user.getId());
             for (FriendRequestEntity fr : acceptedRelationships) {
@@ -246,6 +272,12 @@ public class ShelfService {
                 notificationService.createNotification(friend, NotificationType.FRIEND_FINISHED_BOOK,
                         user, entry.getId());
             }
+        }
+
+        // STATS-03 (A5 adopted): transitioning INTO CURRENTLY_READING (starting a book) also
+        // counts as reading activity. No lastReadDate here either — only updateProgress sets it.
+        if (wasNotReading && willBeReading) {
+            readingActivityRepository.recordActivity(user.getId(), LocalDate.now());
         }
 
         return toDto(entry);
@@ -264,6 +296,13 @@ public class ShelfService {
     public ShelfEntryDto updateProgress(UUID id, UpdateProgressRequest req, UserEntity user) {
         UserBookEntity entry = getEntryForUser(id, user);
         entry.setCurrentPage(req.getCurrentPage());
+        // STATS-03/STATS-04: a progress log is THE streak trigger — stamp the per-book
+        // pace anchor and record today's activity. Both dates are server-assigned
+        // LocalDate.now(); the request carries only currentPage (anti-backfill, T-12-03).
+        // recordActivity is idempotent (ON CONFLICT DO NOTHING) and runs inside this
+        // @Transactional method as required by the @Modifying native insert.
+        entry.setLastReadDate(LocalDate.now());
+        readingActivityRepository.recordActivity(user.getId(), LocalDate.now());
         shelfRepository.save(entry);
         return toDto(entry);
     }
@@ -382,6 +421,10 @@ public class ShelfService {
      * are denormalized from the associated {@link BookEntity} (D-08). The book association
      * must be loaded (not a lazy proxy) before calling this method — ensured by JOIN FETCH
      * in the list queries and by the {@code @Transactional} scope on {@code addToShelf}.
+     *
+     * <p>Pace projection (STATS-04/05): {@code estimatedFinishDate} is computed here via
+     * {@link PaceCalculator#estimateFinishDate} — pure arithmetic, negligible per-row cost
+     * on the JOIN-FETCHed list. Null means "not enough data" (STATS-05), never an error.
      */
     private ShelfEntryDto toDto(UserBookEntity entry) {
         BookEntity book = entry.getBook();
@@ -397,7 +440,12 @@ public class ShelfService {
                 book.getTitle(),
                 book.getOpenLibraryKey().replaceFirst("^/works/", ""),
                 book.getCoverId(),
-                book.getAuthors()
+                book.getAuthors(),
+                book.getPageCount(),                                     // STATS-04: activates shelf progress bar
+                entry.getLastReadDate(),                                 // STATS-04: pace anchor
+                PaceCalculator.estimateFinishDate(book.getPageCount(),   // STATS-04/05: null = "not enough data"
+                        entry.getCurrentPage(), entry.getDateStarted(),
+                        entry.getLastReadDate(), LocalDate.now())
         );
     }
 }
