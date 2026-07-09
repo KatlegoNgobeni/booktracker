@@ -6,6 +6,22 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * getInitials — derive up to 2 uppercase initials from a display name.
+ *
+ * Splits on spaces, filters empty segments (handles double spaces), takes the
+ * first two words, and uppercases each word's first character.
+ * Single source of truth — do not duplicate in pages (consumed by UserAvatar).
+ */
+export function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join('');
+}
+
+/**
  * formatRelativeDate — human-readable relative timestamp with no external dependency.
  *
  * Returns: "today" | "yesterday" | "N days ago" | "N week(s) ago" |
