@@ -180,6 +180,9 @@ public class FriendRequestService {
         // Delete the row (not set to REJECTED) so the requester can re-send later.
         // Same pattern as cancelRequest — the unique(requester_id, recipient_id) constraint
         // would otherwise permanently block a new request after one rejection.
+        // The response still reports REJECTED (the outcome of this call), not the
+        // pre-delete PENDING snapshot.
+        entity.setStatus("REJECTED");
         FriendRequestDto dto = toDto(entity);
         friendRequestRepository.delete(entity);
         return dto;

@@ -1,6 +1,7 @@
 package com.booktracker.user;
 
 import com.booktracker.security.JwtUtil;
+import com.booktracker.social.FriendRequestService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration;
@@ -49,6 +50,10 @@ class UserControllerTest {
     /** Required by JwtAuthenticationFilter, which is auto-scanned into the slice. */
     @MockitoBean
     private JwtUtil jwtUtil;
+
+    /** Required by UserController's constructor since Phase 9 (friend-status enrichment). */
+    @MockitoBean
+    private FriendRequestService friendRequestService;
 
     /**
      * AUTH-03 / D-10: GET /users/me returns the caller's profile (id, email, displayName, createdAt).
