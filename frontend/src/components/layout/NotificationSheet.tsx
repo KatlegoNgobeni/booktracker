@@ -5,11 +5,9 @@
  * in useNotifications so the list only fetches when the inbox is actually opened).
  * All notifications are marked as read by the parent (AppHeader) on open (D-08).
  *
- * Icon map per notification type (UI-SPEC section 2):
- *   FRIEND_REQUEST       → UserPlus
- *   FRIEND_ACCEPTED      → UserCheck
- *   FRIEND_FINISHED_BOOK → BookOpen
- *   REVIEW_LIKED         → Heart
+ * Leading element per row (AVATAR-04, Phase 12): the actor's generated avatar
+ * (UserAvatar seeded by actorId) — replaced the former per-type icon chip at the
+ * identical 32px footprint, so there is zero layout shift.
  *
  * Copy strategy: text composed from type + actorDisplayName only.
  * Note: NotificationDto does not carry a book title (entityId is a UUID, not a readable name).
@@ -21,7 +19,7 @@
  * - T-09-21: All user-provided strings rendered via JSX text interpolation only — no dangerouslySetInnerHTML.
  */
 import { useEffect } from 'react';
-import { Bell, Loader2, UserPlus, UserCheck, BookOpen, Heart } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -29,16 +27,9 @@ import {
   SheetTitle,
 } from '../ui/sheet';
 import { useNotifications } from '../../hooks/useNotifications';
+import { UserAvatar } from '../shared/UserAvatar';
 import { formatRelativeDate } from '../../lib/utils';
-import type { NotificationType, NotificationDto } from '../../types/api.types';
-
-/** Per-type Lucide icon (UI-SPEC section 2 icon map) */
-const TYPE_ICON: Record<NotificationType, React.ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>> = {
-  FRIEND_REQUEST: UserPlus,
-  FRIEND_ACCEPTED: UserCheck,
-  FRIEND_FINISHED_BOOK: BookOpen,
-  REVIEW_LIKED: Heart,
-};
+import type { NotificationDto } from '../../types/api.types';
 
 /**
  * Compose the human-readable notification text from type + actorDisplayName.
@@ -105,28 +96,29 @@ export function NotificationSheet({ open, onOpenChange }: NotificationSheetProps
               <p className="text-sm text-muted-foreground text-center">No notifications yet.</p>
             </div>
           ) : (
-            notifications.map((notif) => {
-              const Icon = TYPE_ICON[notif.type] ?? Bell;
-              return (
-                <div
-                  key={notif.id}
-                  className="flex items-start gap-3 px-4 py-3 border-b last:border-b-0"
-                >
-                  {/* Per-type icon in a circular muted chip */}
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                    <Icon className="h-4 w-4" aria-hidden="true" />
-                  </div>
+            notifications.map((notif) => (
+              <div
+                key={notif.id}
+                className="flex items-start gap-3 px-4 py-3 border-b last:border-b-0"
+              >
+                {/* AVATAR-04: actor's generated avatar — same 32px footprint as the
+                    former icon chip (size-8), zero layout shift */}
+                <UserAvatar
+                  userId={notif.actorId}
+                  displayName={notif.actorDisplayName}
+                  size="default"
+                  className="shrink-0"
+                />
 
-                  {/* Notification text + relative timestamp */}
-                  <div className="flex flex-col gap-1 min-w-0">
-                    <p className="text-sm text-foreground">{getNotificationText(notif)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatRelativeDate(notif.createdAt)}
-                    </p>
-                  </div>
+                {/* Notification text + relative timestamp */}
+                <div className="flex flex-col gap-1 min-w-0">
+                  <p className="text-sm text-foreground">{getNotificationText(notif)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatRelativeDate(notif.createdAt)}
+                  </p>
                 </div>
-              );
-            })
+              </div>
+            ))
           )}
         </div>
       </SheetContent>

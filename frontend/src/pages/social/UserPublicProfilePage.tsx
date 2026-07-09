@@ -19,6 +19,7 @@ import { usePublicProfile, useCurrentUserId, useLikeReview, useUnlikeReview } fr
 import { FollowButton } from '../../components/shared/FollowButton';
 import { BookCoverImage } from '../../components/shared/BookCoverImage';
 import { StarRating } from '../../components/shared/StarRating';
+import { UserAvatar } from '../../components/shared/UserAvatar';
 import { cn } from '../../lib/utils';
 import type { PublicShelfEntry } from '../../types/api.types';
 
@@ -50,7 +51,11 @@ function ProfileHeader({
   return (
     <div className="flex flex-col gap-3 pb-3 border-b">
       <div className="flex items-start justify-between gap-3">
-        <h1 className="text-xl font-semibold leading-tight">{displayName}</h1>
+        {/* AVATAR-02: generated avatar (40px) leads the display name, gap-3 (UI-SPEC) */}
+        <div className="flex items-center gap-3 min-w-0">
+          <UserAvatar userId={userId} displayName={displayName} size="lg" />
+          <h1 className="text-xl font-semibold leading-tight">{displayName}</h1>
+        </div>
         {showFollowButton && (
           <FollowButton userId={userId} isFollowing={isFollowing} />
         )}

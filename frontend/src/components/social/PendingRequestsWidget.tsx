@@ -12,24 +12,14 @@
  *   no dangerouslySetInnerHTML.
  * - T-09-17: Accept/reject mutations send no userId in the body; identity comes from JWT.
  */
-import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
+import { UserAvatar } from '../shared/UserAvatar';
 import {
   usePendingReceivedRequests,
   useAcceptFriendRequest,
   useRejectFriendRequest,
 } from '../../hooks/useSocial';
-
-/** Derive up to 2 uppercase initials from a display name. */
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0].toUpperCase())
-    .join('');
-}
 
 // ────────────────────────────────────────────────────────
 // Single pending-request row
@@ -37,9 +27,12 @@ function getInitials(name: string): string {
 
 function PendingRequestRow({
   requestId,
+  requesterId,
   displayName,
 }: {
   requestId: string;
+  /** Requester's user UUID — seeds the generated avatar (AVATAR-05). */
+  requesterId: string;
   displayName: string;
 }) {
   const acceptMutation = useAcceptFriendRequest(requestId);
@@ -48,10 +41,9 @@ function PendingRequestRow({
 
   return (
     <div className="flex items-center gap-3 px-4 py-2 border-b last:border-b-0">
-      <Avatar size="sm">
-        {/* T-09-16: initials derived from displayName via string split — no HTML injection */}
-        <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
-      </Avatar>
+      {/* AVATAR-05: generated avatar seeded by requester UUID; T-09-16 — initials
+          fallback derives from displayName via string split, no HTML injection */}
+      <UserAvatar userId={requesterId} displayName={displayName} size="sm" />
       <p className="flex-1 text-sm text-foreground min-w-0 truncate">
         <strong className="font-semibold">{displayName}</strong>
         {' '}wants to be your friend
@@ -98,6 +90,7 @@ export function PendingRequestsWidget() {
           <PendingRequestRow
             key={req.id}
             requestId={req.id}
+            requesterId={req.requesterId}
             displayName={req.requesterDisplayName}
           />
         ))}

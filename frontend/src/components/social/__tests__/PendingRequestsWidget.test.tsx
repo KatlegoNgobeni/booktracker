@@ -5,6 +5,8 @@
  * 1. Returns nothing (renders null) when there are no pending requests
  * 2. Renders one row per request with Accept and Reject buttons when requests exist
  * 3. Clicking Accept invokes the accept mutation
+ * 4. Each row renders the shared UserAvatar seeded by requesterId — initials
+ *    fallback visible in jsdom (AVATAR-05, 12-05)
  */
 import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -104,5 +106,17 @@ describe('PendingRequestsWidget', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /accept/i }));
     expect(mockAcceptMutate).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders the UserAvatar initials fallback per requester row (AVATAR-05)', () => {
+    vi.mocked(useSocialModule.usePendingReceivedRequests).mockReturnValue({
+      data: SAMPLE_REQUESTS,
+    } as ReturnType<typeof useSocialModule.usePendingReceivedRequests>);
+
+    renderWidget();
+
+    // jsdom never fires image load, so the radix fallback shows initials
+    expect(screen.getByText('A')).toBeInTheDocument(); // Alice
+    expect(screen.getByText('BS')).toBeInTheDocument(); // Bob Smith
   });
 });

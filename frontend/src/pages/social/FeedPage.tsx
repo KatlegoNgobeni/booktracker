@@ -16,6 +16,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { BookCoverImage } from '../../components/shared/BookCoverImage';
 import { StarRating } from '../../components/shared/StarRating';
+import { UserAvatar } from '../../components/shared/UserAvatar';
 import { PendingRequestsWidget } from '../../components/social/PendingRequestsWidget';
 import { useFeed } from '../../hooks/useSocial';
 import { formatRelativeDate } from '../../lib/utils';
@@ -28,6 +29,15 @@ import type { FeedItem } from '../../types/api.types';
 function FeedItemCard({ item }: { item: FeedItem }) {
   return (
     <div className="flex gap-3 py-3 border-b last:border-b-0">
+      {/* AVATAR-03: reader's generated avatar leads each feed row (32px, gap-3 per UI-SPEC).
+          Non-interactive decoration — the name Link below handles navigation. */}
+      <UserAvatar
+        userId={item.userId}
+        displayName={item.displayName}
+        size="default"
+        className="shrink-0"
+      />
+
       {/* Book cover — links to book detail */}
       <Link to={`/books/${item.bookOlKey}`} className="flex-shrink-0">
         <BookCoverImage

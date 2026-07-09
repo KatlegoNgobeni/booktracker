@@ -5,8 +5,10 @@
  * 1. Renders search input and "Find your next book" empty state on initial load
  * 2. Submitting a query triggers GET /books/search with param `q` and renders result cards
  * 3. "Load more" is shown only when the last page length equals 10 (array-based pagination)
+ * 4. People results render the shared UserAvatar (initials fallback in jsdom) (AVATAR-05, 12-05)
  */
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
@@ -102,5 +104,33 @@ describe('SearchPage', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /load more/i })).toBeInTheDocument();
     });
+  });
+
+  it('renders people results with the shared UserAvatar initials fallback (AVATAR-05)', async () => {
+    const user = userEvent.setup();
+    const mockGet = vi.mocked(api.get);
+    mockGet.mockResolvedValue({
+      data: {
+        content: [
+          {
+            id: 'user-uuid-1',
+            displayName: 'Sam Reader',
+            friendStatus: 'NONE',
+          },
+        ],
+      },
+    } as never);
+
+    renderSearchPage();
+
+    await user.click(screen.getByRole('tab', { name: /people/i }));
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'sam' } });
+    fireEvent.submit(screen.getByRole('search'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Sam Reader')).toBeInTheDocument();
+    });
+    // jsdom never fires image load, so radix renders the initials fallback ("SR")
+    expect(screen.getByText('SR')).toBeInTheDocument();
   });
 });

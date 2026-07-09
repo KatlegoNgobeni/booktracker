@@ -23,22 +23,12 @@ import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { Avatar, AvatarFallback } from '../../components/ui/avatar';
 import { BookCoverImage } from '../../components/shared/BookCoverImage';
 import { FriendRequestButton } from '../../components/shared/FriendRequestButton';
+import { UserAvatar } from '../../components/shared/UserAvatar';
 import { useBookSearch } from '../../hooks/useBooks';
 import { useUserSearch } from '../../hooks/useSocial';
 import type { UserSearchResult } from '../../types/api.types';
-
-/** Derive up to 2 uppercase initials from a display name. */
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0].toUpperCase())
-    .join('');
-}
 
 // ────────────────────────────────────────────────────────
 // People result row
@@ -47,9 +37,8 @@ function getInitials(name: string): string {
 function PeopleResultRow({ user }: { user: UserSearchResult }) {
   return (
     <div className="flex items-center gap-3 p-3 rounded-lg border bg-card">
-      <Avatar size="default">
-        <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
-      </Avatar>
+      {/* AVATAR-05: generated avatar seeded by user UUID (initials fallback built in) */}
+      <UserAvatar userId={user.id} displayName={user.displayName} size="default" />
       <div className="flex-1 min-w-0">
         {/* T-09-16: plain JSX text — no dangerouslySetInnerHTML */}
         <p className="text-sm font-semibold text-foreground truncate">{user.displayName}</p>
