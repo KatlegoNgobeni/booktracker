@@ -11,7 +11,7 @@
  * - T-06-13: optional StatsDto fields accessed via optional chaining — no crash on absent fields
  * - GoalDto 404 mapped to "no goal" — no error UI thrown
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -53,6 +53,8 @@ const fullStats: StatsDto = {
   pagesReadThisYear: 2100,
   averageBookLength: 300,
   booksPerMonth: [1, 0, 2, 1, 0, 1, 0, 1, 0, 0, 1, 0],
+  currentStreakDays: 7,
+  longestStreakDays: 21,
   longestBook: { title: 'War and Peace', pageCount: 1225 },
   shortestBook: { title: 'The Great Gatsby', pageCount: 180 },
 };
@@ -63,6 +65,8 @@ const minimalStats: StatsDto = {
   booksReadThisYear: 0,
   currentlyReadingCount: 0,
   booksPerMonth: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  currentStreakDays: 0,
+  longestStreakDays: 0,
 };
 
 beforeEach(() => {
@@ -124,5 +128,55 @@ describe('StatsPage', () => {
     await waitFor(() => {
       expect(screen.getByRole('region', { name: /books read per month/i })).toBeInTheDocument();
     });
+  });
+
+  it('Test 4 (STATS-01/02): renders streak values 7 and 21 with the locked card labels', async () => {
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/stats') return Promise.resolve({ data: fullStats });
+      return Promise.reject({ response: { status: 404 } });
+    });
+
+    renderStatsPage();
+
+    const streaks = await screen.findByRole('region', { name: /reading streaks/i });
+    expect(within(streaks).getByText('7')).toBeInTheDocument();
+    expect(within(streaks).getByText('21')).toBeInTheDocument();
+    expect(within(streaks).getByText('Current streak (days)')).toBeInTheDocument();
+    expect(within(streaks).getByText('Longest streak (days)')).toBeInTheDocument();
+  });
+
+  it('Test 5 (STATS-06): zero streaks render as 0 in normal stat-card style — no error, no hidden section', async () => {
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/stats') return Promise.resolve({ data: minimalStats });
+      return Promise.reject({ response: { status: 404 } });
+    });
+
+    renderStatsPage();
+
+    const streaks = await screen.findByRole('region', { name: /reading streaks/i });
+    // Both cards render the bare value 0
+    expect(within(streaks).getAllByText('0')).toHaveLength(2);
+    expect(within(streaks).getByText('Current streak (days)')).toBeInTheDocument();
+    expect(within(streaks).getByText('Longest streak (days)')).toBeInTheDocument();
+    // No error copy inside the section
+    expect(within(streaks).queryByText(/error|nothing to show/i)).not.toBeInTheDocument();
+  });
+
+  it('Test 6 (placement): Streaks section renders even when the All Time section shows its empty state', async () => {
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/stats') return Promise.resolve({ data: minimalStats });
+      return Promise.reject({ response: { status: 404 } });
+    });
+
+    renderStatsPage();
+
+    // All Time empty state visible (0 books read)
+    await waitFor(() =>
+      expect(screen.getByText(/nothing to show yet/i)).toBeInTheDocument(),
+    );
+
+    // Streaks section still renders with its heading — no empty-state gate
+    const streaks = screen.getByRole('region', { name: /reading streaks/i });
+    expect(within(streaks).getByRole('heading', { name: 'Streaks' })).toBeInTheDocument();
   });
 });

@@ -63,9 +63,11 @@ export interface ShelfEntry {
   rating: number | null;
   review: string | null;
   currentPage: number | null;
-  pageCount?: number | null;    // Optional book page count — show progress bar only when present and > 0 (D-10)
+  pageCount: number | null;     // Book page count — always present since 12-03; show progress bar only when > 0 (D-10)
   dateStarted: string | null;   // ISO LocalDate (YYYY-MM-DD)
   dateFinished: string | null;  // ISO LocalDate (YYYY-MM-DD)
+  lastReadDate: string | null;         // ISO LocalDate (YYYY-MM-DD) — pace anchor, set by progress updates (STATS-04)
+  estimatedFinishDate: string | null;  // ISO LocalDate (YYYY-MM-DD) — null = not enough data (STATS-05)
   createdAt: string;            // ISO OffsetDateTime
   // Inline book summary (denormalized in ShelfEntryDto)
   title: string;
@@ -86,6 +88,8 @@ export interface StatsDto {
   pagesReadThisYear?: number;
   averageBookLength?: number;
   booksPerMonth: number[];         // always 12-element array [Jan..Dec]
+  currentStreakDays: number;       // always present — backend int primitive, 0 for no activity (STATS-01/06)
+  longestStreakDays: number;       // always present — backend int primitive, 0 for no activity (STATS-02/06)
   longestBook?: { title: string; pageCount: number };
   shortestBook?: { title: string; pageCount: number };
 }
