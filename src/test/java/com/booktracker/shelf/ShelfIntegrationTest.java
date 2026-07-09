@@ -1,5 +1,6 @@
 package com.booktracker.shelf;
 
+import com.booktracker.activity.ReadingActivityRepository;
 import com.booktracker.books.BookEntity;
 import com.booktracker.books.BookRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +20,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -48,6 +50,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>{@code listFilteredByStatus} — SHELF-02 + D-09: status filter returns only matching entries</li>
  *   <li>{@code getEntryOwnershipReturns403} — SHELF-06 + T-04-01: GET /shelf/{id} returns 403 for wrong owner</li>
  *   <li>{@code getMissingEntryReturns404} — SHELF-06: GET /shelf/{random-uuid} returns 404</li>
+ *   <li>{@code sameDayProgressLogsRecordSingleActivityRow} — STATS-03: two same-day progress
+ *       logs yield exactly one reading_activity row (idempotent upsert)</li>
+ *   <li>{@code shelfListSerializesPaceProjectionFields} — STATS-04/05: shelf JSON carries
+ *       pageCount, lastReadDate, and a nullable estimatedFinishDate key</li>
  * </ul>
  *
  * <p><strong>URL convention:</strong> TestRestTemplate base URL includes the context-path
@@ -98,8 +104,19 @@ class ShelfIntegrationTest {
     @Autowired
     private BookRepository bookRepository;
 
+    /**
+     * Autowired to assert reading_activity row counts directly (STATS-03 idempotency) —
+     * the ON CONFLICT DO NOTHING upsert is PostgreSQL syntax, exercised here against
+     * the real Testcontainers PostgreSQL 16 instance (H2 is banned per project convention).
+     */
+    @Autowired
+    private ReadingActivityRepository readingActivityRepository;
+
     /** JWT token obtained per-test via a fresh user registration. */
     private String authToken;
+
+    /** UUID of the per-test registered user — used for direct repository assertions. */
+    private UUID userId;
 
     /** Per-class counter — ensures unique email per test (shared DB, no per-test rollback). */
     private static final AtomicInteger testUserCounter = new AtomicInteger(0);
@@ -122,6 +139,9 @@ class ShelfIntegrationTest {
                 .postForEntity("/api/auth/register", registerBody, Map.class)
                 .getBody();
         authToken = response.get("token").toString();
+        // Capture the new user's id from the register response for repository assertions
+        Map<?, ?> user = (Map<?, ?>) response.get("user");
+        userId = UUID.fromString(user.get("id").toString());
     }
 
     /**
@@ -541,6 +561,108 @@ class ShelfIntegrationTest {
             Map.class);
 
         assertThat(deleteResponse.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    }
+
+    // ----------------------------------------------------------------
+    // STATS-03: Reading activity recording (same-day idempotency)
+    // ----------------------------------------------------------------
+
+    /**
+     * STATS-03 + T-12-02: PATCH /shelf/{id}/progress twice on the same day records
+     * exactly ONE reading_activity row for the user — the ON CONFLICT DO NOTHING
+     * upsert (plan 12-01) makes recording idempotent, never a duplicate-key 500.
+     *
+     * <p>Also asserts the progress response carries a non-null {@code lastReadDate}
+     * (STATS-04 pace anchor, set by updateProgress only).
+     *
+     * <p>Note: addToShelf with CURRENTLY_READING also records activity for today —
+     * the same (user_id, activity_date) row the PATCHes upsert into, so the total
+     * remains exactly 1 regardless of which call site inserted first.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void sameDayProgressLogsRecordSingleActivityRow() {
+        String olKey = seedBook("N");
+        ResponseEntity<Map> addResponse = restTemplate.exchange(
+            "/api/shelf", HttpMethod.POST,
+            new HttpEntity<>(Map.of("olKey", olKey, "status", "CURRENTLY_READING"), bearerHeaders()),
+            Map.class);
+        assertThat(addResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String entryId = addResponse.getBody().get("entryId").toString();
+
+        // First progress log today
+        ResponseEntity<Map> firstPatch = restTemplate.exchange(
+            "/api/shelf/" + entryId + "/progress", HttpMethod.PATCH,
+            new HttpEntity<>(Map.of("currentPage", 50), bearerHeaders()),
+            Map.class);
+        assertThat(firstPatch.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // Second progress log, same day
+        ResponseEntity<Map> secondPatch = restTemplate.exchange(
+            "/api/shelf/" + entryId + "/progress", HttpMethod.PATCH,
+            new HttpEntity<>(Map.of("currentPage", 80), bearerHeaders()),
+            Map.class);
+        assertThat(secondPatch.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // STATS-03: exactly one activity row for this user despite two same-day logs
+        List<LocalDate> activityDates = readingActivityRepository.findActivityDatesDesc(userId);
+        assertThat(activityDates).hasSize(1);
+        assertThat(activityDates.get(0)).isEqualTo(LocalDate.now());
+
+        // STATS-04: updateProgress stamps lastReadDate — non-null in the response JSON
+        Map<?, ?> body = secondPatch.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.get("lastReadDate")).isNotNull();
+    }
+
+    // ----------------------------------------------------------------
+    // STATS-04/05: Pace-projection fields on the shelf DTO
+    // ----------------------------------------------------------------
+
+    /**
+     * STATS-04 + STATS-05: GET /shelf serializes the three pace-projection fields —
+     * {@code pageCount} (non-null, from the seeded book), {@code lastReadDate}
+     * (non-null after a progress log), and {@code estimatedFinishDate} as a PRESENT
+     * key whose value may be null: a same-day start means activeDays < 1 ("just
+     * started"), and null signals "not enough data" per STATS-05 — never an error.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void shelfListSerializesPaceProjectionFields() {
+        String olKey = seedBook("P");
+        ResponseEntity<Map> addResponse = restTemplate.exchange(
+            "/api/shelf", HttpMethod.POST,
+            new HttpEntity<>(Map.of("olKey", olKey, "status", "CURRENTLY_READING"), bearerHeaders()),
+            Map.class);
+        assertThat(addResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String entryId = addResponse.getBody().get("entryId").toString();
+
+        // Log some progress so lastReadDate is populated
+        ResponseEntity<Map> patchResponse = restTemplate.exchange(
+            "/api/shelf/" + entryId + "/progress", HttpMethod.PATCH,
+            new HttpEntity<>(Map.of("currentPage", 100), bearerHeaders()),
+            Map.class);
+        assertThat(patchResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // List shelf and inspect the entry's serialized fields
+        ResponseEntity<Map> listResponse = restTemplate.exchange(
+            "/api/shelf", HttpMethod.GET,
+            new HttpEntity<>(bearerHeaders()),
+            Map.class);
+        assertThat(listResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        List<?> content = (List<?>) listResponse.getBody().get("content");
+        assertThat(content).hasSize(1);
+        Map<?, ?> entry = (Map<?, ?>) content.get(0);
+
+        // STATS-04: pageCount exposed (seedBook sets 200); lastReadDate stamped today
+        assertThat(entry.get("pageCount")).isEqualTo(200);
+        assertThat(entry.get("lastReadDate")).isEqualTo(LocalDate.now().toString());
+
+        // STATS-05: estimatedFinishDate key is PRESENT; value is null here because
+        // dateStarted == lastReadDate (same-day start → activeDays < 1 → "just started")
+        assertThat(entry.containsKey("estimatedFinishDate")).isTrue();
+        assertThat(entry.get("estimatedFinishDate")).isNull();
     }
 
     // ----------------------------------------------------------------
