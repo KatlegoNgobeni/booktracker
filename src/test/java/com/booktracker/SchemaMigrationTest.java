@@ -96,4 +96,44 @@ class SchemaMigrationTest {
                     .isIn("varchar", "character varying", "text");
         }
     }
+
+    /**
+     * Asserts that V7__reading_streaks.sql creates the reading_activity table
+     * (STATS-01/02/03 — per-user-per-day streak history).
+     */
+    @Test
+    void v7MigrationCreatesReadingActivityTable() throws SQLException {
+        List<String> foundTables = new ArrayList<>();
+
+        try (Connection conn = dataSource.getConnection();
+             ResultSet rs = conn.getMetaData().getTables(
+                     null, "public", "%", new String[]{"TABLE"})) {
+            while (rs.next()) {
+                foundTables.add(rs.getString("TABLE_NAME").toLowerCase());
+            }
+        }
+
+        assertThat(foundTables)
+                .as("V7 migration must create the reading_activity table")
+                .contains("reading_activity");
+    }
+
+    /**
+     * Asserts that V7__reading_streaks.sql adds the last_read_date column to
+     * user_books with SQL DATE type (STATS-04 — pace-projection anchor).
+     */
+    @Test
+    void v7MigrationAddsLastReadDateColumnAsDate() throws SQLException {
+        try (Connection conn = dataSource.getConnection();
+             ResultSet rs = conn.getMetaData().getColumns(
+                     null, "public", "user_books", "last_read_date")) {
+            assertThat(rs.next())
+                    .as("last_read_date column must exist in user_books")
+                    .isTrue();
+            String typeName = rs.getString("TYPE_NAME").toLowerCase();
+            assertThat(typeName)
+                    .as("last_read_date must be stored as SQL DATE")
+                    .isEqualTo("date");
+        }
+    }
 }

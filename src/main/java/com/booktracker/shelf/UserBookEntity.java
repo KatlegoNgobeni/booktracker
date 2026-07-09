@@ -37,6 +37,7 @@ import java.util.UUID;
  *   <li>{@code current_page} integer → {@code Integer} (nullable)</li>
  *   <li>{@code date_started} date → {@code LocalDate} (nullable)</li>
  *   <li>{@code date_finished} date → {@code LocalDate} (nullable)</li>
+ *   <li>{@code last_read_date} date → {@code LocalDate} (nullable, from V7__reading_streaks.sql)</li>
  *   <li>{@code created_at}   timestamptz → {@code OffsetDateTime} (immutable, set via @PrePersist)</li>
  * </ul>
  *
@@ -107,6 +108,15 @@ public class UserBookEntity {
      */
     @Column(name = "date_finished")
     private LocalDate dateFinished;
+
+    /**
+     * Date the user last logged reading activity on this book. Nullable.
+     * Set by {@link ShelfService} on progress logs (STATS-03 wiring lands in plan 12-03);
+     * anchors the pace-projection denominator (STATS-04).
+     * Column added in {@code V7__reading_streaks.sql}.
+     */
+    @Column(name = "last_read_date")
+    private LocalDate lastReadDate;
 
     /** Immutable — set at insert time via {@code @PrePersist}. */
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -194,6 +204,14 @@ public class UserBookEntity {
 
     public void setDateFinished(LocalDate dateFinished) {
         this.dateFinished = dateFinished;
+    }
+
+    public LocalDate getLastReadDate() {
+        return lastReadDate;
+    }
+
+    public void setLastReadDate(LocalDate lastReadDate) {
+        this.lastReadDate = lastReadDate;
     }
 
     public OffsetDateTime getCreatedAt() {
