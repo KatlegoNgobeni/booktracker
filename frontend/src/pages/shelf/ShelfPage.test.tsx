@@ -18,7 +18,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ShelfPage } from './ShelfPage';
 import { api } from '../../lib/api';
 import type { ShelfEntry, Page } from '../../types/api.types';
@@ -66,6 +66,8 @@ const currentlyReadingWithPageCount: ShelfEntry = {
   pageCount: 310,
   dateStarted: '2024-01-01',
   dateFinished: null,
+  lastReadDate: '2026-07-08',
+  estimatedFinishDate: '2026-07-24',
   createdAt: '2024-01-01T00:00:00Z',
 };
 
@@ -74,6 +76,8 @@ const currentlyReadingNullPageCount: ShelfEntry = {
   entryId: 'entry-2',
   currentPage: 50,
   pageCount: null,
+  lastReadDate: null,
+  estimatedFinishDate: null,
 };
 
 const readEntryWithRating: ShelfEntry = {
@@ -89,6 +93,8 @@ const readEntryWithRating: ShelfEntry = {
   pageCount: null,
   dateStarted: null,
   dateFinished: '2024-01-10',
+  lastReadDate: null,
+  estimatedFinishDate: null,
   createdAt: '2024-01-01T00:00:00Z',
 };
 
@@ -105,6 +111,8 @@ const abandonedEntry: ShelfEntry = {
   pageCount: null,
   dateStarted: '2024-02-01',
   dateFinished: '2024-03-15',
+  lastReadDate: null,
+  estimatedFinishDate: null,
   createdAt: '2024-02-01T00:00:00Z',
 };
 
@@ -113,6 +121,28 @@ beforeEach(() => {
   // Default: all status queries return empty pages
   vi.mocked(api.get).mockResolvedValue({ data: emptyPage } as never);
 });
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+/** Pin the wall clock to a fixed date (Date only — real timers stay live for userEvent/waitFor). */
+function pinToday(date: Date) {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(date);
+}
+
+/** Mock the CURRENTLY_READING query to return a single entry; other statuses empty. */
+function mockCurrentlyReading(entry: ShelfEntry) {
+  vi.mocked(api.get).mockImplementation(((_url: string, cfg?: { params?: { status?: string } }) => {
+    if (cfg?.params?.status === 'CURRENTLY_READING') {
+      return Promise.resolve({
+        data: { content: [entry], number: 0, size: 20, totalPages: 1, totalElements: 1 },
+      });
+    }
+    return Promise.resolve({ data: emptyPage });
+  }) as never);
+}
 
 describe('ShelfPage', () => {
   it('Test 1: renders three tab controls labelled Want to Read, Currently Reading, Read', async () => {
@@ -256,5 +286,83 @@ describe('ShelfPage', () => {
     await waitFor(() =>
       expect(screen.getByText('No abandoned books')).toBeInTheDocument(),
     );
+  });
+
+  it('Test 7 (STATS-04): same-year estimatedFinishDate renders "Est. finish: 24 Jul"', async () => {
+    pinToday(new Date(2026, 6, 10)); // 10 Jul 2026
+    mockCurrentlyReading({
+      ...currentlyReadingWithPageCount,
+      estimatedFinishDate: '2026-07-24',
+    });
+
+    const { user } = renderShelfPage();
+    await user.click(screen.getByRole('tab', { name: 'Currently Reading' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('Est. finish: 24 Jul')).toBeInTheDocument(),
+    );
+  });
+
+  it('Test 8 (STATS-05): null estimatedFinishDate renders "Not enough data"', async () => {
+    mockCurrentlyReading({
+      ...currentlyReadingWithPageCount,
+      lastReadDate: null,
+      estimatedFinishDate: null,
+    });
+
+    const { user } = renderShelfPage();
+    await user.click(screen.getByRole('tab', { name: 'Currently Reading' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('Not enough data')).toBeInTheDocument(),
+    );
+  });
+
+  it('Test 9 (today case): estimatedFinishDate equal to today renders "Est. finish: today"', async () => {
+    pinToday(new Date(2026, 6, 10)); // 10 Jul 2026
+    mockCurrentlyReading({
+      ...currentlyReadingWithPageCount,
+      estimatedFinishDate: '2026-07-10',
+    });
+
+    const { user } = renderShelfPage();
+    await user.click(screen.getByRole('tab', { name: 'Currently Reading' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('Est. finish: today')).toBeInTheDocument(),
+    );
+  });
+
+  it('Test 10 (year boundary): next-year date renders with the year appended', async () => {
+    pinToday(new Date(2026, 11, 20)); // 20 Dec 2026
+    mockCurrentlyReading({
+      ...currentlyReadingWithPageCount,
+      estimatedFinishDate: '2027-01-12',
+    });
+
+    const { user } = renderShelfPage();
+    await user.click(screen.getByRole('tab', { name: 'Currently Reading' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('Est. finish: 12 Jan 2027')).toBeInTheDocument(),
+    );
+  });
+
+  it('Test 11 (Pitfall 1 activation): pageCount 300 + currentPage 100 renders progress bar and pages caption', async () => {
+    mockCurrentlyReading({
+      ...currentlyReadingWithPageCount,
+      currentPage: 100,
+      pageCount: 300,
+    });
+
+    const { user } = renderShelfPage();
+    await user.click(screen.getByRole('tab', { name: 'Currently Reading' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('The Hobbit')).toBeInTheDocument(),
+    );
+
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    expect(screen.getByText('100 / 300 pages')).toBeInTheDocument();
   });
 });
