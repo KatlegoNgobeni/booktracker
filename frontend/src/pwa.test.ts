@@ -99,6 +99,14 @@ describe('PWA workbox runtimeCaching — vite.config.ts', () => {
     expect(configSource).toContain('CacheFirst');
   });
 
+  it('declares a CacheFirst handler for api.dicebear.com', () => {
+    // AVATAR-07: the source regex literal contains 'dicebear' as a text token;
+    // the cacheName 'dicebear-avatars' confirms the CacheFirst group is present.
+    expect(configSource).toContain('dicebear');
+    expect(configSource).toContain('dicebear-avatars');
+    expect(configSource).toContain('CacheFirst');
+  });
+
   it('covers CacheFirst handler includes cacheableResponse statuses [0, 200] for opaque responses', () => {
     expect(configSource).toMatch(/cacheableResponse/);
     expect(configSource).toMatch(/statuses.*\[0.*200\]|statuses.*0.*200/s);

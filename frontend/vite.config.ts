@@ -48,6 +48,17 @@ export default defineConfig({
               expiration: { maxEntries: 300, maxAgeSeconds: 30 * 24 * 60 * 60 },
             },
           },
+          {
+            // AVATAR-07: Dicebear avatars work offline. Not in the sign-out
+            // purge list — this cache holds no authenticated data.
+            urlPattern: /^https:\/\/api\.dicebear\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'dicebear-avatars',
+              cacheableResponse: { statuses: [0, 200] },
+              expiration: { maxEntries: 200, maxAgeSeconds: 7 * 24 * 60 * 60 },
+            },
+          },
         ],
       },
     }),
