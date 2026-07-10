@@ -7,10 +7,16 @@
  * - 401 redirect and token removal (non-auth endpoints)
  * - No redirect loop for /auth/login 401
  *
+ * Tests 5-7 (12-07) verify centralized 401 session teardown:
+ * - Singleton queryClient cleared on non-auth 401
+ * - SW 'api-cache' purged on non-auth 401
+ * - /auth/* 401 leaves the query cache intact (guard regression)
+ *
  * Uses vi.mock — msw excluded per RESEARCH package legitimacy gate (SLOP verdict).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TOKEN_KEY } from './api';
+import { queryClient } from './queryClient';
 
 // Helper: get the registered interceptors by rebuilding them inline
 // We test the interceptor logic directly via the exported api instance
@@ -59,6 +65,8 @@ describe('Axios interceptor: response 401 handling (api.ts)', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();
+    // Reset the shared singleton so tests stay independent (12-07)
+    queryClient.clear();
     // Store original location
     originalLocation = window.location;
     // Allow location.href to be set in tests
@@ -70,6 +78,7 @@ describe('Axios interceptor: response 401 handling (api.ts)', () => {
 
   afterEach(() => {
     localStorage.clear();
+    vi.unstubAllGlobals();
     // Restore original location
     Object.defineProperty(window, 'location', {
       writable: true,
@@ -119,5 +128,66 @@ describe('Axios interceptor: response 401 handling (api.ts)', () => {
     expect(localStorage.getItem(TOKEN_KEY)).toBe('my-token');
     // Location should NOT change to /login
     expect(window.location.href).toBe('/');
+  });
+
+  it('Test 5: 401 on non-/auth URL clears the singleton queryClient and redirects', async () => {
+    localStorage.setItem(TOKEN_KEY, 'my-token');
+    queryClient.setQueryData(['me'], { id: 'user-a' });
+
+    const { api } = await import('./api');
+    const responseInterceptors = (api.interceptors.response as any).handlers;
+
+    const err = {
+      response: { status: 401 },
+      config: { url: '/shelf' },
+    };
+
+    await responseInterceptors[0].rejected(err).catch(() => {
+      // Expected to reject (re-throw)
+    });
+
+    expect(queryClient.getQueryData(['me'])).toBeUndefined();
+    expect(window.location.href).toBe('/login');
+  });
+
+  it("Test 6: 401 on non-/auth URL purges the SW api-cache via caches.delete('api-cache')", async () => {
+    localStorage.setItem(TOKEN_KEY, 'my-token');
+    const deleteMock = vi.fn().mockResolvedValue(true);
+    vi.stubGlobal('caches', { delete: deleteMock });
+
+    const { api } = await import('./api');
+    const responseInterceptors = (api.interceptors.response as any).handlers;
+
+    const err = {
+      response: { status: 401 },
+      config: { url: '/shelf' },
+    };
+
+    await responseInterceptors[0].rejected(err).catch(() => {
+      // Expected to reject (re-throw)
+    });
+
+    expect(deleteMock).toHaveBeenCalledWith('api-cache');
+  });
+
+  it('Test 7: 401 on /auth/login leaves the seeded queryClient cache intact (guard regression)', async () => {
+    localStorage.setItem(TOKEN_KEY, 'my-token');
+    queryClient.setQueryData(['me'], { id: 'user-a' });
+
+    const { api } = await import('./api');
+    const responseInterceptors = (api.interceptors.response as any).handlers;
+
+    const err = {
+      response: { status: 401 },
+      config: { url: '/auth/login' },
+    };
+
+    await responseInterceptors[0].rejected(err).catch(() => {
+      // Expected to reject (re-throw)
+    });
+
+    // Cache entry must survive — extends Test 4's no-loop guarantee to the cache
+    expect(queryClient.getQueryData(['me'])).toEqual({ id: 'user-a' });
+    expect(localStorage.getItem(TOKEN_KEY)).toBe('my-token');
   });
 });
