@@ -8,7 +8,10 @@
  *
  * Infinite staleTime — identity (id, email, displayName) is immutable in MVP
  * (D-08: no profile editing endpoint exists), so the cached value never goes
- * stale within a session. Sign-out clears the QueryClient on navigation.
+ * stale within a session. This is safe ONLY because clearAuthSession
+ * (lib/auth.ts) wipes the query cache at every auth boundary: voluntary
+ * sign-out (ProfilePage), 401 forced logout (api.ts interceptor), and
+ * defensively on login/register success (LoginPage/RegisterPage).
  *
  * T-06-12: only the authenticated user's own /users/me is reachable — the
  * server scopes the response to the JWT subject.

@@ -6,7 +6,7 @@
  */
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BookOpen } from 'lucide-react';
 import { api, TOKEN_KEY } from '../../lib/api';
 import { Button } from '../../components/ui/button';
@@ -19,6 +19,7 @@ interface LoginResponse {
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +29,11 @@ export function LoginPage() {
       api.post<LoginResponse>('/auth/login', { email, password }).then((r) => r.data),
     onSuccess: (data) => {
       localStorage.setItem(TOKEN_KEY, data.token);
+      // Defensive auth-boundary clear — a fresh sign-in must never inherit
+      // another identity's cached queries, even if a sign-out path missed
+      // teardown (e.g. user landed on /login via direct URL while a stale
+      // session cache was still in memory).
+      queryClient.clear();
       navigate('/shelf');
     },
     onError: () => {

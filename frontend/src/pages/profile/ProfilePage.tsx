@@ -4,15 +4,15 @@
  * No profile editing in MVP (D-08: no PATCH /users/me endpoint exists).
  * Elements:
  *  - UserAvatar (shared, AVATAR-01) + displayName + email from GET /users/me via useCurrentUser
- *  - "Sign Out" button — clears booktracker_token + navigates to /login
+ *  - "Sign Out" button — full session teardown via clearAuthSession + navigate to /login
  *
  * Dark mode is controlled globally from the AppHeader toggle (Phase 11 D-05).
  *
  * T-06-12: Only authenticated user's own /users/me is shown (server scopes to token subject)
- * TOKEN_KEY imported from api.ts — single source of truth for localStorage key name
  */
 import { useNavigate } from 'react-router-dom';
-import { TOKEN_KEY } from '../../lib/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { clearAuthSession } from '../../lib/auth';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { usePublicProfile } from '../../hooks/useSocial';
 import { UserAvatar } from '../../components/shared/UserAvatar';
@@ -22,17 +22,20 @@ import { Separator } from '../../components/ui/separator';
 
 export function ProfilePage() {
   const navigate = useNavigate();
+  // At runtime this is the lib/queryClient.ts singleton (provided by main.tsx),
+  // so voluntary sign-out wipes the same cache the 401 forced-logout path wipes.
+  const queryClient = useQueryClient();
   // AVATAR-06 dedupe: same QUERY_KEYS.me() cache entry as AppHeader — one fetch app-wide.
   const { data: me, isPending, isError, refetch } = useCurrentUser();
   const { data: socialProfile } = usePublicProfile(me?.id ?? '');
 
   function handleSignOut() {
-    localStorage.removeItem(TOKEN_KEY);
-    // WR-03: purge SW-cached authenticated API responses so the next user on
-    // this device cannot read shelf/profile/feed data from Cache Storage.
-    if ('caches' in window) {
-      void caches.delete('api-cache').catch(() => {});
-    }
+    // Session teardown is centralized in lib/auth.ts (clearAuthSession):
+    // token removal + QueryClient.clear() run synchronously before navigation;
+    // the SW 'api-cache' purge (WR-03) continues in the background exactly as
+    // the old fire-and-forget code did. Fixes UAT tests 3/4 — cached identity
+    // and unread-count previously survived into the next user's session.
+    void clearAuthSession(queryClient);
     navigate('/login', { replace: true });
   }
 
