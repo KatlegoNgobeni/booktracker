@@ -24,7 +24,6 @@ vi.mock('../../../hooks/useSocial', () => ({
 const mockAcceptMutate = vi.fn();
 const mockRejectMutate = vi.fn();
 
-const IDLE_MUTATION = { mutate: vi.fn(), isPending: false };
 const ACCEPT_MUTATION = { mutate: mockAcceptMutate, isPending: false };
 const REJECT_MUTATION = { mutate: mockRejectMutate, isPending: false };
 
@@ -62,10 +61,10 @@ function renderWidget() {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useSocialModule.useAcceptFriendRequest).mockReturnValue(
-    ACCEPT_MUTATION as ReturnType<typeof useSocialModule.useAcceptFriendRequest>,
+    ACCEPT_MUTATION as unknown as ReturnType<typeof useSocialModule.useAcceptFriendRequest>,
   );
   vi.mocked(useSocialModule.useRejectFriendRequest).mockReturnValue(
-    REJECT_MUTATION as ReturnType<typeof useSocialModule.useRejectFriendRequest>,
+    REJECT_MUTATION as unknown as ReturnType<typeof useSocialModule.useRejectFriendRequest>,
   );
 });
 
@@ -73,7 +72,7 @@ describe('PendingRequestsWidget', () => {
   it('renders nothing when there are no pending requests', () => {
     vi.mocked(useSocialModule.usePendingReceivedRequests).mockReturnValue({
       data: [],
-    } as ReturnType<typeof useSocialModule.usePendingReceivedRequests>);
+    } as unknown as ReturnType<typeof useSocialModule.usePendingReceivedRequests>);
 
     const { container } = renderWidget();
     expect(container.firstChild).toBeNull();

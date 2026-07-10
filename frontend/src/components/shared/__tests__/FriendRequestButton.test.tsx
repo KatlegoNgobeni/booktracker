@@ -28,10 +28,6 @@ function makeIdleMutation() {
   return { mutate: mockMutate, isPending: false };
 }
 
-function makePendingMutation() {
-  return { mutate: mockMutate, isPending: true };
-}
-
 function makeQueryClient() {
   return new QueryClient({ defaultOptions: { queries: { retry: false } } });
 }
@@ -50,16 +46,16 @@ beforeEach(() => {
   vi.clearAllMocks();
   // Default all mutations to idle (non-pending)
   vi.mocked(useSocialModule.useSendFriendRequest).mockReturnValue(
-    makeIdleMutation() as ReturnType<typeof useSocialModule.useSendFriendRequest>,
+    makeIdleMutation() as unknown as ReturnType<typeof useSocialModule.useSendFriendRequest>,
   );
   vi.mocked(useSocialModule.useCancelFriendRequest).mockReturnValue(
-    makeIdleMutation() as ReturnType<typeof useSocialModule.useCancelFriendRequest>,
+    makeIdleMutation() as unknown as ReturnType<typeof useSocialModule.useCancelFriendRequest>,
   );
   vi.mocked(useSocialModule.useAcceptFriendRequest).mockReturnValue(
-    makeIdleMutation() as ReturnType<typeof useSocialModule.useAcceptFriendRequest>,
+    makeIdleMutation() as unknown as ReturnType<typeof useSocialModule.useAcceptFriendRequest>,
   );
   vi.mocked(useSocialModule.useRejectFriendRequest).mockReturnValue(
-    makeIdleMutation() as ReturnType<typeof useSocialModule.useRejectFriendRequest>,
+    makeIdleMutation() as unknown as ReturnType<typeof useSocialModule.useRejectFriendRequest>,
   );
 });
 
