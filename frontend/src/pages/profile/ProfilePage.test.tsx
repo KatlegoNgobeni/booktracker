@@ -153,3 +153,60 @@ describe('ProfilePage', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
   });
 });
+
+describe('ProfilePage — user switch regression (UAT test 3)', () => {
+  const userB = {
+    id: 'user-2',
+    email: 'switcher@example.com',
+    displayName: 'Bookworm B',
+    createdAt: '2025-06-01T00:00:00Z',
+  };
+
+  it('refetches /users/me after sign-out → sign-in as another user in the same tab', async () => {
+    // ONE shared QueryClient across both mounts, staleTime Infinity for
+    // queries — mirrors production ['me'] semantics. Without the auth-boundary
+    // teardown, user A's identity would be served from cache forever.
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+
+    let currentUser = meResponse;
+    vi.mocked(api.get).mockImplementation(((url: string) =>
+      url === '/users/me'
+        ? Promise.resolve({ data: currentUser })
+        : Promise.resolve({
+            data: { followerCount: 0, followingCount: 0, entries: [] },
+          })) as never);
+
+    // Mount 1: user A signs in and views their profile.
+    const first = renderProfilePage(client);
+    await waitFor(() =>
+      expect(screen.getByText('Avid Reader')).toBeInTheDocument(),
+    );
+
+    // Re-point the identity mock to user B BEFORE clicking Sign Out: navigate
+    // is mocked, so unlike production the page stays mounted for an instant
+    // after the cache clear and its observer refires /users/me immediately.
+    // Pointing at user B first keeps that in-flight refetch from re-caching
+    // user A (in production, real navigation unmounts ProfilePage first).
+    currentUser = userB;
+
+    await first.user.click(screen.getByRole('button', { name: /sign out/i }));
+    first.unmount();
+
+    // Mount 2: same tab, same QueryClient, no reload — user B signs in.
+    renderProfilePage(client);
+
+    // The new identity renders immediately — not user A's cached profile.
+    await waitFor(() =>
+      expect(screen.getByText('Bookworm B')).toBeInTheDocument(),
+    );
+    expect(screen.queryByText('Avid Reader')).toBeNull();
+
+    // /users/me was fetched a second time — refetched, not served from cache.
+    const meCalls = vi
+      .mocked(api.get)
+      .mock.calls.filter(([url]) => url === '/users/me');
+    expect(meCalls.length).toBeGreaterThanOrEqual(2);
+  });
+});
