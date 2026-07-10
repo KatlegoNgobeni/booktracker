@@ -6,6 +6,12 @@
  * 2. ProfilePage no longer renders a dark mode switch (Phase 11 D-05 — theme is
  *    controlled globally from the AppHeader toggle; see AppHeader.test.tsx / useTheme.test.ts)
  * 3. Sign Out removes booktracker_token and navigates to /login
+ * 4. Sign Out clears the TanStack Query cache (auth-boundary teardown, 12-08)
+ * 5. User switch regression (UAT test 3): same-tab sign-out → sign-in as a
+ *    different user refetches /users/me instead of serving the old identity
+ *
+ * Note: clearAuthSession from the REAL lib/auth.ts runs inside these tests —
+ * intentional, so the assertions exercise the true production teardown.
  *
  * Mocking strategy:
  * - vi.mock('../../lib/api') → mocks api.get
@@ -23,6 +29,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { ProfilePage } from './ProfilePage';
 import { api } from '../../lib/api';
+import { QUERY_KEYS } from '../../lib/queryKeys';
 
 vi.mock('../../lib/api', () => ({
   api: { get: vi.fn() },
@@ -52,10 +59,12 @@ function makeClient() {
   });
 }
 
-function renderProfilePage() {
+// Accepts an external QueryClient so tests can seed the cache before render
+// and share ONE client across two mounts (user switch regression below).
+function renderProfilePage(client: QueryClient = makeClient()) {
   const user = userEvent.setup();
   const utils = render(
-    <QueryClientProvider client={makeClient()}>
+    <QueryClientProvider client={client}>
       <MemoryRouter>
         <ProfilePage />
       </MemoryRouter>
@@ -110,6 +119,37 @@ describe('ProfilePage', () => {
     expect(localStorage.getItem('booktracker_token')).toBeNull();
 
     // Navigation to /login with replace
+    expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
+  });
+
+  it('Test 4: Sign Out clears the TanStack Query cache', async () => {
+    localStorage.setItem('booktracker_token', 'test-jwt-token');
+
+    // staleTime Infinity mirrors production ['me'] semantics — the seeded
+    // entries render without a mount refetch. api.get never resolves so a
+    // post-clear refetch cannot repopulate the cache before the assertions.
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    client.setQueryData(QUERY_KEYS.me(), meResponse);
+    client.setQueryData(['notifications', 'unread-count'], 0);
+    vi.mocked(api.get).mockImplementation(() => new Promise(() => {}));
+
+    const { user } = renderProfilePage(client);
+
+    await waitFor(() =>
+      expect(screen.getByText('Avid Reader')).toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByRole('button', { name: /sign out/i }));
+
+    // The entire query cache must be torn down at the auth boundary —
+    // the next user in this tab must not inherit identity or unread-count.
+    expect(client.getQueryData(QUERY_KEYS.me())).toBeUndefined();
+    expect(client.getQueryData(['notifications', 'unread-count'])).toBeUndefined();
+
+    // Token removed and navigation preserved (existing behavior).
+    expect(localStorage.getItem('booktracker_token')).toBeNull();
     expect(mockNavigate).toHaveBeenCalledWith('/login', { replace: true });
   });
 });
