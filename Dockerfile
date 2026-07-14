@@ -16,6 +16,11 @@ RUN npm ci
 # npm run build = tsc -b && vite build (see frontend/package.json)
 # Output: /app/frontend/dist
 COPY frontend/ ./
+# MOB-01: pass the Render platform git SHA into the Vite define block.
+# ARG scope is per-stage — must be declared in this stage, not globally.
+# Default 'dev' means local `docker build` (without --build-arg) still works.
+ARG RENDER_GIT_COMMIT=dev
+ENV RENDER_GIT_COMMIT=$RENDER_GIT_COMMIT
 RUN npm run build
 
 # ============================================================
