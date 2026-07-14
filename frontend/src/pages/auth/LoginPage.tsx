@@ -48,7 +48,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-screen sm:grid-cols-2">
+    <div className="grid min-h-dvh sm:grid-cols-2">
       {/* Left: Branding panel — order-2 on mobile so form appears first */}
       <div className="flex flex-col items-center justify-center gap-4 bg-primary text-primary-foreground p-8 py-10 sm:py-8 order-2 sm:order-1">
         <BookOpen className="h-10 w-10" aria-hidden="true" />
