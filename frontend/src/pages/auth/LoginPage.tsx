@@ -103,6 +103,10 @@ export function LoginPage() {
               Create one
             </Link>
           </p>
+          {/* MOB-01: build version — diagnosable before auth */}
+          <p className="text-xs text-muted-foreground/50 text-center mt-4">
+            v{__APP_VERSION__}
+          </p>
         </div>
       </div>
     </div>
