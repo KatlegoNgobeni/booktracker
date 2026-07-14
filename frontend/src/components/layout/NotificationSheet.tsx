@@ -68,7 +68,7 @@ export function NotificationSheet({ open, onOpenChange }: NotificationSheetProps
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="max-h-[75vh] flex flex-col px-0 pb-4">
+      <SheetContent side="bottom" className="max-h-[75dvh] flex flex-col px-0 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <SheetHeader className="px-4 pb-2 border-b">
           <SheetTitle>Notifications</SheetTitle>
         </SheetHeader>

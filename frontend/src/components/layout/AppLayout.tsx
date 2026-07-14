@@ -21,9 +21,9 @@ import { BottomNav } from './BottomNav';
 
 export function AppLayout() {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-dvh flex-col">
       <AppHeader />          {/* NEW — Phase 9 (D-07): notification bell lives in AppHeader */}
-      <main className="flex-1 pb-16">
+      <main className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))]">
         <div className="mx-auto w-full max-w-2xl px-4 sm:px-6 pt-4">
           <Outlet />
         </div>

@@ -19,7 +19,7 @@ const tabs = [
 export function BottomNav() {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background"
+      className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background pb-[env(safe-area-inset-bottom)]"
       aria-label="Main navigation"
     >
       <ul className="flex h-16 items-center justify-around">

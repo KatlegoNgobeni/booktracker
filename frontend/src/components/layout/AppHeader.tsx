@@ -82,7 +82,7 @@ export function AppHeader() {
   return (
     <>
       {/* Sticky top bar — h-12 (48px) as specified in UI-SPEC section 1 */}
-      <header className="sticky top-0 z-40 flex h-12 items-center justify-between border-b bg-background px-4">
+      <header className="sticky top-0 z-40 flex h-12 items-center justify-between border-b bg-background px-4 pt-[env(safe-area-inset-top)]">
         {/* Identity — avatar + display name via shared useCurrentUser (AVATAR-06).
             While the query is pending the slot stays empty; the fixed h-12 row
             height guarantees zero layout jump when identity resolves (UI-SPEC 2). */}
