@@ -238,7 +238,7 @@ function EditorForm({
             <select
               id="status"
               {...register('status')}
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-base md:text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
               <option value="WANT_TO_READ">Want to Read</option>
               <option value="CURRENTLY_READING">Currently Reading</option>
@@ -304,7 +304,7 @@ function EditorForm({
               rows={4}
               placeholder="What did you think?"
               {...register('review')}
-              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+              className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
             />
             {errors.review && (
               <p className="text-sm text-destructive">{errors.review.message}</p>
