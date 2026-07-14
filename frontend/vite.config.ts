@@ -66,6 +66,11 @@ export default defineConfig({
   define: {
     // sockjs-client references Node.js `global`; polyfill it for the browser.
     global: 'globalThis',
+    // MOB-01: bake the build version string into the bundle at compile time.
+    // On Render, RENDER_GIT_COMMIT is a platform env var (short SHA available
+    // via slice(0,7)). Locally it falls back to 'dev'. The date component
+    // makes every build unique even when RENDER_GIT_COMMIT is absent.
+    __APP_VERSION__: JSON.stringify(`${process.env.RENDER_GIT_COMMIT?.slice(0, 7) ?? 'dev'}-${new Date().toISOString().slice(0, 10)}`),
   },
   resolve: {
     alias: { '@': path.resolve(__dirname, './src') },

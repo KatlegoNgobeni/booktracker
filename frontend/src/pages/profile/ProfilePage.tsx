@@ -106,6 +106,10 @@ export function ProfilePage() {
         <p className="text-xs text-muted-foreground text-center mt-2">
           Member since {new Date(me.createdAt).getFullYear()}
         </p>
+        {/* MOB-01: build version — diagnosable staleness indicator */}
+        <p className="text-xs text-muted-foreground/50 text-center mt-1">
+          v{__APP_VERSION__}
+        </p>
       </section>
     </div>
   );
