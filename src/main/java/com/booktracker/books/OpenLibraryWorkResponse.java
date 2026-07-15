@@ -56,6 +56,14 @@ public class OpenLibraryWorkResponse {
     @JsonProperty("covers")
     private List<Integer> covers;
 
+    /**
+     * Open Library subject tags — nullable (absent for many works, especially older or
+     * less-curated entries). Stored pipe-delimited in {@link BookEntity#subjects} (STATS-07).
+     * Deserialized as a plain string array from the {@code subjects} JSON array.
+     */
+    @JsonProperty("subjects")
+    private List<String> subjects;
+
     public String getKey() {
         return key;
     }
@@ -94,5 +102,13 @@ public class OpenLibraryWorkResponse {
 
     public void setCovers(List<Integer> covers) {
         this.covers = covers;
+    }
+
+    public List<String> getSubjects() {
+        return subjects;
+    }
+
+    public void setSubjects(List<String> subjects) {
+        this.subjects = subjects;
     }
 }
