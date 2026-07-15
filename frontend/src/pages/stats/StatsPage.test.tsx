@@ -198,9 +198,9 @@ describe('StatsPage', () => {
 
     renderStatsPage();
 
-    // All Time empty state visible (0 books read)
+    // All Time empty state visible (0 books read) — use getAllByText since STATS-06 also shows this copy in the chart section
     await waitFor(() =>
-      expect(screen.getByText(/nothing to show yet/i)).toBeInTheDocument(),
+      expect(screen.getAllByText(/nothing to show yet/i).length).toBeGreaterThan(0),
     );
 
     // Streaks section still renders with its heading — no empty-state gate
