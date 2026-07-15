@@ -5,6 +5,14 @@
  * 1. StatsPage renders goal progress using goalTarget + booksReadThisYear when a goal is set
  * 2. When no goal is set (goalTarget absent), "No yearly goal set" and Set Goal control render
  * 3. StatsDto missing optional fields renders without throwing; booksPerMonth renders 12 buckets
+ * 4. STATS-01: active streak shows flame callout with count and "day streak" label
+ * 5. STATS-02: zero streak with no history shows first-streak empty state
+ * 5b. STATS-02: zero streak with history shows "Your best: N days" message
+ * 6. Streaks section renders even when All Time section shows empty state
+ * 7. STATS-01: fullStats streak shows count and "day streak"; old plain-card labels gone
+ * 8. STATS-02: brokenStreak shows "No active streak" and "Your best: 14 days"
+ * 9. STATS-04: verdict paragraph (ahead/behind/on track) renders when hasGoal
+ * 10. STATS-05: pages-per-day paragraph renders when hasGoal and pagesReadThisYear present
  *
  * Mocking strategy:
  * - vi.mock('../../lib/api') → mocks api.get
@@ -69,6 +77,9 @@ const minimalStats: StatsDto = {
   longestStreakDays: 0,
 };
 
+// Broken streak — no active streak but has history
+const brokenStreak: StatsDto = { ...minimalStats, longestStreakDays: 14 };
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -130,7 +141,7 @@ describe('StatsPage', () => {
     });
   });
 
-  it('Test 4 (STATS-01/02): renders streak values 7 and 21 with the locked card labels', async () => {
+  it('Test 4 (STATS-01): active streak shows flame callout card with count and "day streak" label', async () => {
     vi.mocked(api.get).mockImplementation((url: string) => {
       if (url === '/stats') return Promise.resolve({ data: fullStats });
       return Promise.reject({ response: { status: 404 } });
@@ -139,13 +150,15 @@ describe('StatsPage', () => {
     renderStatsPage();
 
     const streaks = await screen.findByRole('region', { name: /reading streaks/i });
+    // New flame callout card: shows the count and "day streak" label
     expect(within(streaks).getByText('7')).toBeInTheDocument();
-    expect(within(streaks).getByText('21')).toBeInTheDocument();
-    expect(within(streaks).getByText('Current streak (days)')).toBeInTheDocument();
-    expect(within(streaks).getByText('Longest streak (days)')).toBeInTheDocument();
+    expect(within(streaks).getByText(/day streak/i)).toBeInTheDocument();
+    // Old plain-card labels are gone
+    expect(within(streaks).queryByText('Current streak (days)')).not.toBeInTheDocument();
+    expect(within(streaks).queryByText('Longest streak (days)')).not.toBeInTheDocument();
   });
 
-  it('Test 5 (STATS-06): zero streaks render as 0 in normal stat-card style — no error, no hidden section', async () => {
+  it('Test 5 (STATS-02): zero-streak with no history shows first-streak empty state', async () => {
     vi.mocked(api.get).mockImplementation((url: string) => {
       if (url === '/stats') return Promise.resolve({ data: minimalStats });
       return Promise.reject({ response: { status: 404 } });
@@ -154,12 +167,27 @@ describe('StatsPage', () => {
     renderStatsPage();
 
     const streaks = await screen.findByRole('region', { name: /reading streaks/i });
-    // Both cards render the bare value 0
-    expect(within(streaks).getAllByText('0')).toHaveLength(2);
-    expect(within(streaks).getByText('Current streak (days)')).toBeInTheDocument();
-    expect(within(streaks).getByText('Longest streak (days)')).toBeInTheDocument();
+    // Empty state copy for first-ever streak
+    expect(within(streaks).getByText(/no active streak/i)).toBeInTheDocument();
+    expect(within(streaks).getByText(/read today to start your first streak/i)).toBeInTheDocument();
+    // Old plain-card labels are gone
+    expect(within(streaks).queryByText('Current streak (days)')).not.toBeInTheDocument();
+    expect(within(streaks).queryByText('Longest streak (days)')).not.toBeInTheDocument();
     // No error copy inside the section
-    expect(within(streaks).queryByText(/error|nothing to show/i)).not.toBeInTheDocument();
+    expect(within(streaks).queryByText(/error/i)).not.toBeInTheDocument();
+  });
+
+  it('Test 5b (STATS-02): zero-streak with history shows "Your best: N days" message', async () => {
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/stats') return Promise.resolve({ data: brokenStreak });
+      return Promise.reject({ response: { status: 404 } });
+    });
+
+    renderStatsPage();
+
+    const streaks = await screen.findByRole('region', { name: /reading streaks/i });
+    expect(within(streaks).getByText(/no active streak/i)).toBeInTheDocument();
+    expect(within(streaks).getByText(/your best.*14.*day/i)).toBeInTheDocument();
   });
 
   it('Test 6 (placement): Streaks section renders even when the All Time section shows its empty state', async () => {
@@ -170,13 +198,66 @@ describe('StatsPage', () => {
 
     renderStatsPage();
 
-    // All Time empty state visible (0 books read)
+    // All Time empty state visible (0 books read) — use getAllByText since STATS-06 also shows this copy in the chart section
     await waitFor(() =>
-      expect(screen.getByText(/nothing to show yet/i)).toBeInTheDocument(),
+      expect(screen.getAllByText(/nothing to show yet/i).length).toBeGreaterThan(0),
     );
 
     // Streaks section still renders with its heading — no empty-state gate
     const streaks = screen.getByRole('region', { name: /reading streaks/i });
     expect(within(streaks).getByRole('heading', { name: 'Streaks' })).toBeInTheDocument();
+  });
+
+  it('Test 7 (STATS-01): fullStats active streak shows count and "day streak"; old plain-card labels gone', async () => {
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/stats') return Promise.resolve({ data: fullStats });
+      return Promise.reject({ response: { status: 404 } });
+    });
+
+    renderStatsPage();
+
+    const streaks = await screen.findByRole('region', { name: /reading streaks/i });
+    // Flame callout card shows the streak count and label
+    expect(within(streaks).getByText('7')).toBeInTheDocument();
+    expect(within(streaks).getByText(/day streak/i)).toBeInTheDocument();
+    // Old plain-card label is replaced
+    expect(within(streaks).queryByText('Current streak (days)')).not.toBeInTheDocument();
+  });
+
+  it('Test 8 (STATS-02): brokenStreak shows "No active streak" and "Your best: 14 days"', async () => {
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/stats') return Promise.resolve({ data: brokenStreak });
+      return Promise.reject({ response: { status: 404 } });
+    });
+
+    renderStatsPage();
+
+    const streaks = await screen.findByRole('region', { name: /reading streaks/i });
+    expect(within(streaks).getByText(/no active streak/i)).toBeInTheDocument();
+    expect(within(streaks).getByText(/your best.*14.*day/i)).toBeInTheDocument();
+  });
+
+  it('Test 9 (STATS-04): verdict paragraph renders in goal section when hasGoal', async () => {
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/stats') return Promise.resolve({ data: fullStats });
+      return Promise.reject({ response: { status: 404 } });
+    });
+
+    renderStatsPage();
+
+    const goal = await screen.findByRole('region', { name: /yearly reading goal/i });
+    expect(within(goal).getByText(/ahead of schedule|behind schedule|on track/i)).toBeInTheDocument();
+  });
+
+  it('Test 10 (STATS-05): pages-per-day paragraph renders in goal section when hasGoal and pagesReadThisYear present', async () => {
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/stats') return Promise.resolve({ data: fullStats });
+      return Promise.reject({ response: { status: 404 } });
+    });
+
+    renderStatsPage();
+
+    const goal = await screen.findByRole('region', { name: /yearly reading goal/i });
+    expect(within(goal).getByText(/pages.*day|pages\/day/i)).toBeInTheDocument();
   });
 });
