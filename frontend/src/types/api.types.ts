@@ -92,6 +92,7 @@ export interface StatsDto {
   longestStreakDays: number;       // always present — backend int primitive, 0 for no activity (STATS-02/06)
   longestBook?: { title: string; pageCount: number };
   shortestBook?: { title: string; pageCount: number };
+  topGenre?: string;               // absent if no subject data accumulated yet (STATS-08)
 }
 
 // Derived from GoalDto.java

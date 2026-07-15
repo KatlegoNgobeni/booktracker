@@ -12,8 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Assembles the computed analytics DTO for {@code GET /api/stats} (STATS-02, D-13).
@@ -118,7 +120,7 @@ public class StatsService {
         int currentStreakDays = StreakCalculator.currentStreak(activityDates, LocalDate.now());
         int longestStreakDays = StreakCalculator.longestStreak(activityDates);
 
-        return new StatsDto(
+        StatsDto dto = new StatsDto(
                 booksReadAllTime,
                 booksReadThisYear,
                 currentlyReadingCount,
@@ -133,6 +135,22 @@ public class StatsService {
                 currentStreakDays,
                 longestStreakDays
         );
+
+        // ---- topGenre (STATS-08): most common first-subject-token among this year's READ books ----
+        // Reuses readThisYear (already loaded above) — no additional DB query.
+        // Extracts the first pipe-token from each book's subjects string and finds the mode.
+        readThisYear.stream()
+                .filter(ub -> ub.getBook().getSubjects() != null
+                        && !ub.getBook().getSubjects().isEmpty())
+                .map(ub -> ub.getBook().getSubjects().split("\\|")[0].trim())
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.groupingBy(s -> s, Collectors.counting()))
+                .entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .ifPresent(dto::setTopGenre);
+
+        return dto;
     }
 
     /**
