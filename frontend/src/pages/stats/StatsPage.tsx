@@ -14,6 +14,7 @@
  *     STATS-02: motivational empty state when currentStreakDays === 0
  *  4. All-time stat cards — 2-col grid, Display-size (28px) numbers with muted
  *     14px labels (optional fields via optional chaining — T-06-13)
+ *     STATS-08: topGenre card (col-span-2) when stats.topGenre is present
  *
  * T-06-13: All optional StatsDto fields use optional chaining — absent fields do not crash
  * T-06-14: goalTarget input coerced to number before PUT; backend validates non-negative integer
@@ -317,6 +318,15 @@ export function StatsPage() {
                     {stats.shortestBook.title} ({stats.shortestBook.pageCount} pp)
                   </p>
                   <p className="text-sm text-muted-foreground">Shortest book</p>
+                </CardContent>
+              </Card>
+            )}
+            {/* STATS-08: topGenre card — only rendered when subject data is available */}
+            {stats.topGenre != null && (
+              <Card className="col-span-2">
+                <CardContent className="p-4">
+                  <p className="text-base font-semibold">{stats.topGenre}</p>
+                  <p className="text-sm text-muted-foreground">Top genre this year</p>
                 </CardContent>
               </Card>
             )}

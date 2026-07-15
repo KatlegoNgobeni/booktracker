@@ -182,6 +182,15 @@ public class BookService {
             entity.setCoverId(null);
         }
 
+        // STATS-07: persist Open Library subjects as pipe-delimited string; null if absent or empty.
+        // varchar(1000) cap enforced by substring to match the V8 migration column limit.
+        // Empty string is never written — null is used to signal "no subject data yet".
+        List<String> rawSubjects = work.getSubjects();
+        if (rawSubjects != null && !rawSubjects.isEmpty()) {
+            String joined = String.join("|", rawSubjects);
+            entity.setSubjects(joined.length() > 1000 ? joined.substring(0, 1000) : joined);
+        }
+
         return entity;
     }
 }

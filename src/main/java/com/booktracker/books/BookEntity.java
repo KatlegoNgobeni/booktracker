@@ -71,6 +71,14 @@ public class BookEntity {
     @Column(name = "first_publish_year")
     private Integer firstPublishYear;
 
+    /**
+     * Pipe-delimited Open Library subjects (e.g. {@code "Fiction|Literature|Classic"}).
+     * Nullable — null means no subject data has been fetched yet. Empty string is never written.
+     * Max 1000 chars — matches the V8 migration DDL constraint (STATS-07).
+     */
+    @Column(name = "subjects")
+    private String subjects;
+
     /** Immutable — set at insert time via {@code @PrePersist}. */
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -141,6 +149,14 @@ public class BookEntity {
 
     public void setFirstPublishYear(Integer firstPublishYear) {
         this.firstPublishYear = firstPublishYear;
+    }
+
+    public String getSubjects() {
+        return subjects;
+    }
+
+    public void setSubjects(String subjects) {
+        this.subjects = subjects;
     }
 
     public OffsetDateTime getCreatedAt() {

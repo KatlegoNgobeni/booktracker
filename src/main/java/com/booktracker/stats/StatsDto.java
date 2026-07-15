@@ -95,6 +95,15 @@ public class StatsDto {
      */
     private final int longestStreakDays;
 
+    /**
+     * Most common first-subject-token among this year's READ books with non-null subjects.
+     * Null if no subject data is available yet — absent from JSON when null per class-level
+     * {@code @JsonInclude(NON_NULL)} (STATS-08).
+     * Mutable (not final) so {@link StatsService} can set it after construction.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String topGenre;
+
     public StatsDto(long booksReadAllTime,
                     long booksReadThisYear,
                     long currentlyReadingCount,
@@ -173,5 +182,13 @@ public class StatsDto {
 
     public int getLongestStreakDays() {
         return longestStreakDays;
+    }
+
+    public String getTopGenre() {
+        return topGenre;
+    }
+
+    public void setTopGenre(String topGenre) {
+        this.topGenre = topGenre;
     }
 }
