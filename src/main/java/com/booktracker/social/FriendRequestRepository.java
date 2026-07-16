@@ -164,4 +164,65 @@ public interface FriendRequestRepository extends JpaRepository<FriendRequestEnti
             "AND ub.dateFinished IS NOT NULL"
     )
     Page<UserBookEntity> findFeedForFriends(@Param("userId") UUID userId, Pageable pageable);
+
+    /**
+     * Friends-reading feed — paginated list of CURRENTLY_READING user_books from accepted
+     * friends in either direction, ordered by createdAt DESC.
+     *
+     * <p><strong>Bidirectional (D-03, Pattern 5):</strong>
+     * Friends are users where the current user is either:
+     * <ul>
+     *   <li>the requester of an ACCEPTED request (friends are the recipients), or</li>
+     *   <li>the recipient of an ACCEPTED request (friends are the requesters)</li>
+     * </ul>
+     *
+     * <p><strong>countQuery is mandatory (RESEARCH Anti-Pattern / Pitfall):</strong>
+     * Hibernate 6 cannot auto-derive a count query from JPQL with JOIN FETCH. The explicit
+     * {@code countQuery} omits JOIN FETCH (not needed for counting) and ORDER BY.
+     *
+     * <p><strong>Differences from findFeedForFriends:</strong>
+     * <ul>
+     *   <li>Filters {@code ub.shelfStatus = 'CURRENTLY_READING'} (not {@code 'READ'})</li>
+     *   <li>No {@code ub.dateFinished IS NOT NULL} clause (in-progress books have no finish date)</li>
+     *   <li>Ordered by {@code ub.createdAt DESC} (not {@code ub.dateFinished DESC})</li>
+     * </ul>
+     *
+     * <p><strong>Scoped by JWT (T-15-01):</strong> {@code :userId} is always
+     * {@code currentUser.getId()} from {@code @AuthenticationPrincipal} in
+     * {@link SocialService#getFriendsCurrentlyReading} — never from the HTTP request.
+     *
+     * <p><strong>Information Disclosure (T-15-02):</strong>
+     * JPQL WHERE clause restricts to bidirectional ACCEPTED friends only — same guard as
+     * {@link #findFeedForFriends}. Non-friends' CURRENTLY_READING entries never appear.
+     *
+     * @param userId   the authenticated user's UUID
+     * @param pageable page/size/sort
+     * @return paginated CURRENTLY_READING entries from accepted friends, ordered by createdAt DESC
+     */
+    @Query(
+        value =
+            "SELECT ub FROM UserBookEntity ub " +
+            "JOIN FETCH ub.book " +
+            "JOIN FETCH ub.user " +
+            "WHERE (ub.user.id IN (" +
+            "    SELECT fr.recipient.id FROM FriendRequestEntity fr " +
+            "    WHERE fr.requester.id = :userId AND fr.status = 'ACCEPTED'" +
+            ") OR ub.user.id IN (" +
+            "    SELECT fr.requester.id FROM FriendRequestEntity fr " +
+            "    WHERE fr.recipient.id = :userId AND fr.status = 'ACCEPTED'" +
+            ")) " +
+            "AND ub.shelfStatus = 'CURRENTLY_READING' " +
+            "ORDER BY ub.createdAt DESC",
+        countQuery =
+            "SELECT COUNT(ub) FROM UserBookEntity ub " +
+            "WHERE (ub.user.id IN (" +
+            "    SELECT fr.recipient.id FROM FriendRequestEntity fr " +
+            "    WHERE fr.requester.id = :userId AND fr.status = 'ACCEPTED'" +
+            ") OR ub.user.id IN (" +
+            "    SELECT fr.requester.id FROM FriendRequestEntity fr " +
+            "    WHERE fr.recipient.id = :userId AND fr.status = 'ACCEPTED'" +
+            ")) " +
+            "AND ub.shelfStatus = 'CURRENTLY_READING'"
+    )
+    Page<UserBookEntity> findFriendsCurrentlyReading(@Param("userId") UUID userId, Pageable pageable);
 }
