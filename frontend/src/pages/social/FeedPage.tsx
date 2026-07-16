@@ -1,16 +1,20 @@
 /**
- * FeedPage.tsx — Activity feed at /feed (SOCIAL-03)
+ * FeedPage.tsx — Letterboxd-style discovery surface at /feed (DISC-01 through DISC-05)
  *
- * Renders an infinite-scroll list of recent book finishes from followed users.
- * Each item links: book title → /books/:olKey; reader name → /users/:userId.
- * Relative timestamps via formatRelativeDate (RESEARCH Pattern 8).
+ * Renders three stacked discovery sections above the existing activity feed:
+ *   1. "Friends are reading"   — books friends currently have open (DISC-01)
+ *   2. "Trending this week"    — curated static list of popular titles (DISC-05)
+ *   3. "Up next for you"       — user's WANT_TO_READ shelf (conditional, DISC-01)
+ *   4. "Friends finished recently" — original infinite-scroll activity feed (DISC-04)
  *
- * Infinite scroll mirrors ShelfPage: useInfiniteQuery + "Load more" button.
- * Empty state is shown when the user follows no one or followees have no finishes.
+ * Each discovery book card is a Link to /books/:olKey (DISC-02).
+ * Discovery card rows use overflow-x-auto + snap-x snap-mandatory for mobile-safe
+ * horizontal scrolling without page-level overflow (DISC-05).
  *
  * Security:
- * - T-08F-02: Feed is scoped server-side to the authenticated user's followees;
- *   no userId is sent from the client (backend uses JWT identity).
+ * - T-08F-02: Feed is scoped server-side to the authenticated user's followees
+ * - T-15-05: All title/displayName rendered via JSX text interpolation — no dangerouslySetInnerHTML
+ * - T-15-06: FeedItemCard uses JSX text throughout (pre-existing mitigation from Phase 8)
  */
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
@@ -18,7 +22,12 @@ import { BookCoverImage } from '../../components/shared/BookCoverImage';
 import { StarRating } from '../../components/shared/StarRating';
 import { UserAvatar } from '../../components/shared/UserAvatar';
 import { PendingRequestsWidget } from '../../components/social/PendingRequestsWidget';
-import { useFeed } from '../../hooks/useSocial';
+import { DiscoverySection } from '../../components/social/DiscoverySection';
+import { DiscoveryBookCard } from '../../components/social/DiscoveryBookCard';
+import { useFeed, useFriendsReading } from '../../hooks/useSocial';
+import { useShelfList } from '../../hooks/useShelf';
+import { useStats } from '../../hooks/useStats';
+import { CURATED_TRENDING } from '../../lib/trending';
 import { formatRelativeDate } from '../../lib/utils';
 import type { FeedItem } from '../../types/api.types';
 
@@ -89,25 +98,65 @@ function FeedItemCard({ item }: { item: FeedItem }) {
   );
 }
 
+// Inline skeleton row for discovery sections still loading
+function InlineSkeletonRow() {
+  return (
+    <>
+      {[1, 2, 3, 4].map((i) => (
+        <div
+          key={i}
+          className="flex-shrink-0 w-24 snap-start"
+        >
+          <div className="aspect-[2/3] w-24 rounded-md bg-muted animate-pulse" />
+          <div className="h-3 mt-1 rounded bg-muted animate-pulse w-16" />
+        </div>
+      ))}
+    </>
+  );
+}
+
 // ────────────────────────────────────────────────────────
 // FeedPage
 // ────────────────────────────────────────────────────────
 
 export function FeedPage() {
+  // Activity feed (infinite scroll)
   const {
-    data,
-    isPending,
-    isError,
+    data: feedData,
+    isPending: feedIsPending,
+    isError: feedIsError,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
     refetch,
   } = useFeed();
 
-  // Flatten all pages into a single item list
-  const items = data?.pages.flatMap((p) => p.content) ?? [];
+  // Discovery: Friends are reading
+  const {
+    data: friendsReadingData,
+    isPending: friendsReadingPending,
+  } = useFriendsReading();
 
-  if (isPending) {
+  // Discovery: Up next for you (WANT_TO_READ shelf)
+  const { data: wantToReadData } = useShelfList('WANT_TO_READ');
+
+  // Optional: topGenre for subtitle text on "Up next" section
+  const { data: statsData } = useStats();
+
+  // Flatten all activity feed pages
+  const feedItems = feedData?.pages.flatMap((p) => p.content) ?? [];
+
+  // Friends currently reading
+  const friendsReadingItems = friendsReadingData?.content ?? [];
+
+  // WANT_TO_READ shelf entries (first 10)
+  const wantToReadItems = wantToReadData?.pages?.flatMap((p) => p.content) ?? [];
+
+  // Optional genre subtitle
+  const topGenre = statsData?.topGenre;
+
+  // Full-page loading state: only block render if both discovery + feed are pending
+  if (feedIsPending && friendsReadingPending) {
     return (
       <div className="flex flex-col gap-3">
         {[1, 2, 3].map((i) => (
@@ -121,27 +170,78 @@ export function FeedPage() {
     );
   }
 
-  if (isError) {
-    return (
-      <div className="flex flex-col items-center gap-3 py-16 px-4 text-center">
-        <p className="text-sm text-muted-foreground">
-          Couldn&apos;t load the feed. Try again.
-        </p>
-        <Button variant="outline" size="sm" onClick={() => refetch()}>
-          Retry
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="pb-4">
       {/* D-10: hidden when no pending requests; returns null when empty */}
       <PendingRequestsWidget />
       <h1 className="text-[28px] font-semibold mb-4">Feed</h1>
 
-      {items.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-16 px-4 text-center">
+      {/* Discovery: Friends are reading (DISC-01) */}
+      <DiscoverySection title="Friends are reading">
+        {friendsReadingPending ? (
+          <InlineSkeletonRow />
+        ) : friendsReadingItems.length > 0 ? (
+          friendsReadingItems.map((item) => (
+            <DiscoveryBookCard
+              key={item.entryId}
+              title={item.bookTitle}
+              coverId={item.bookCoverId}
+              olKey={item.bookOlKey}
+            />
+          ))
+        ) : (
+          <p className="text-xs text-muted-foreground py-2 px-1 flex-shrink-0">
+            No friends reading yet. Add friends to see what they&apos;re reading.
+          </p>
+        )}
+      </DiscoverySection>
+
+      {/* Discovery: Trending this week (DISC-05) */}
+      <DiscoverySection title="Trending this week">
+        {CURATED_TRENDING.map((book) => (
+          <DiscoveryBookCard
+            key={book.olKey}
+            title={book.title}
+            coverId={book.coverId}
+            olKey={book.olKey}
+          />
+        ))}
+      </DiscoverySection>
+
+      {/* Discovery: Up next for you — conditional on WANT_TO_READ shelf having items */}
+      {wantToReadItems.length > 0 && (
+        <DiscoverySection
+          title="Up next for you"
+          subtitle={topGenre ? `Based on your interest in ${topGenre}` : undefined}
+        >
+          {wantToReadItems.slice(0, 10).map((item) => (
+            <DiscoveryBookCard
+              key={item.entryId}
+              title={item.title}
+              coverId={item.coverId}
+              olKey={item.olKey}
+            />
+          ))}
+        </DiscoverySection>
+      )}
+
+      {/* Divider */}
+      <div className="border-t my-4" />
+
+      {/* Activity feed: Friends finished recently (DISC-04) */}
+      <h2 className="text-base font-semibold mb-3">Friends finished recently</h2>
+
+      {feedIsError ? (
+        <div className="flex flex-col items-center gap-3 py-16 px-4 text-center">
+          <p className="text-sm text-muted-foreground">
+            Couldn&apos;t load the feed. Try again.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Retry
+          </Button>
+        </div>
+      ) : feedItems.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-8 px-4 text-center">
           <p className="text-base font-semibold">No activity yet</p>
           <p className="text-sm text-muted-foreground max-w-xs">
             Add friends and finish books to see activity here.
@@ -150,7 +250,7 @@ export function FeedPage() {
       ) : (
         <>
           <div className="flex flex-col">
-            {items.map((item) => (
+            {feedItems.map((item) => (
               <FeedItemCard key={item.entryId} item={item} />
             ))}
           </div>

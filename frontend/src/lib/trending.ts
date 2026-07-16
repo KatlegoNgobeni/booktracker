@@ -22,7 +22,7 @@ export const CURATED_TRENDING: TrendingBook[] = [
   { olKey: 'OL98227W',     title: 'To Kill a Mockingbird',                     coverId: '8810140' },
   { olKey: 'OL59634W',     title: 'Pride and Prejudice',                       coverId: '12749976' },
   { olKey: 'OL2630653W',   title: 'The Alchemist',                             coverId: '8714647' },
-  { olKey: 'OL81805W',     title: 'Dune',                                      coverId: '10604490' },
+  { olKey: 'OL81805W',     title: 'Nineteen Eighty-Four',                      coverId: '8127974' },
   { olKey: 'OL18335804W',  title: 'Project Hail Mary',                         coverId: '12175785' },
   { olKey: 'OL5682950W',   title: 'The Midnight Library',                      coverId: '10527843' },
 ];
