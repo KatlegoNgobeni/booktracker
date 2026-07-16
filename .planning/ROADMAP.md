@@ -49,8 +49,8 @@ Full phase details: [.planning/milestones/v1.1-ROADMAP.md](.planning/milestones/
   - [x] 13-03-PLAN.md — MOB-05: on-device discovery pass with triage gate (broken/degraded/nit)
   - [x] 13-04-PLAN.md — MOB-05/06: fix broken items + MOB-06 SW self-update on-device verification
 - [x] **Phase 14: Stats Enrichment** - Streak callout card, pace trends, ahead/behind verdict; genre projections as sub-cuttable tail (completed 2026-07-15)
-- [ ] **Phase 15: Social Discovery & Recommendations** - Letterboxd-style Feed tab with friends activity, trending books, follower/following count bug fix
-- [ ] **Phase 16: Playwright E2E** - Automated auth smoke + core-loop journey + auth-boundary guard, green in CI
+- [x] **Phase 15: Social Discovery & Recommendations** - Letterboxd-style Feed tab with friends activity, trending books, follower/following count bug fix (completed 2026-07-16)
+- [ ] **Phase 16: Playwright E2E** - Automated auth smoke + core-loop journey + auth-boundary guard, green in CI (4 plans)
 - [ ] **Phase 17: Profile Photos** - Cloudinary-backed photo uploads replacing generated avatars (CUTTABLE — cut first under deadline pressure)
 - [ ] **Phase 18: Portfolio Close-out** - Interview-ready README, secret-scanned history, clean-clone verification, v1.2 tag (strictly last)
 
@@ -106,13 +106,14 @@ Plans:
   4. The raw activity feed (what friends have shelved/finished recently) is still reachable — either as a tab within Feed or a section below the discovery content
   5. Works correctly on mobile (iPhone Safari) — discovery cards are touch-friendly, no layout overflow
 
-**Plans**: 4 plans
+**Plans**: 4/4 plans complete
 
 Plans:
-- [ ] 15-01-PLAN.md — Wave 1: test scaffolds for DISC-01/02/03/04 (FeedPage.test.tsx, useSocial.test.ts, SocialIntegrationTest extension)
-- [ ] 15-02-PLAN.md — Wave 1: new GET /api/feed/friends-reading endpoint + FriendsReadingItemDto + dead-code removal
-- [ ] 15-03-PLAN.md — Wave 2: FriendsReadingItem type, friendsReading query key, useFriendsReading hook, follow-count bug fix
-- [ ] 15-04-PLAN.md — Wave 3: DiscoverySection + DiscoveryBookCard components, trending.ts, FeedPage restructure
+
+- [x] 15-01-PLAN.md — Wave 1: test scaffolds for DISC-01/02/03/04 (FeedPage.test.tsx, useSocial.test.ts, SocialIntegrationTest extension)
+- [x] 15-02-PLAN.md — Wave 1: new GET /api/feed/friends-reading endpoint + FriendsReadingItemDto + dead-code removal
+- [x] 15-03-PLAN.md — Wave 2: FriendsReadingItem type, friendsReading query key, useFriendsReading hook, follow-count bug fix
+- [x] 15-04-PLAN.md — Wave 3: DiscoverySection + DiscoveryBookCard components, trending.ts, FeedPage restructure
 
 **UI hint**: yes
 
@@ -129,7 +130,13 @@ Plans:
   4. Two-user auth-boundary test proves no cross-user data appears after sign-out/sign-in (pins the v1.1 cache-leak fix)
   5. Suite runs green as a parallel GitHub Actions job — Chromium-only, PostgreSQL service container, trace-on-failure artifacts
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 16-01-PLAN.md — E2E infrastructure: Playwright config, mock server, global setup/teardown, auth setup project, 4 data-testid additions (E2E-01)
+- [ ] 16-02-PLAN.md — Auth smoke spec: register, login valid, login invalid, logout (E2E-02)
+- [ ] 16-03-PLAN.md — Journey specs: reading loop (E2E-03) + two-user auth boundary (E2E-04)
+- [ ] 16-04-PLAN.md — GitHub Actions e2e job with PostgreSQL service container (E2E-05)
 
 ### Phase 17: Profile Photos
 
@@ -181,7 +188,7 @@ Plans:
 | 12. Generated Avatars, Reading Streaks & Pace Projections | v1.1 | 8/8 | Complete | 2026-07-10 |
 | 13. Mobile Shakedown | v1.2 | 4/4 | Complete   | 2026-07-14 |
 | 14. Stats Enrichment | v1.2 | 2/2 | Complete   | 2026-07-15 |
-| 15. Social Discovery & Recommendations | v1.2 | 0/? | Not started | - |
-| 16. Playwright E2E | v1.2 | 0/? | Not started | - |
+| 15. Social Discovery & Recommendations | v1.2 | 4/4 | Complete   | 2026-07-16 |
+| 16. Playwright E2E | v1.2 | 0/4 | Not started | - |
 | 17. Profile Photos | v1.2 | 0/? | Not started (CUTTABLE) | - |
 | 18. Portfolio Close-out | v1.2 | 0/? | Not started | - |
