@@ -25,6 +25,7 @@ import { QUERY_KEYS } from '../lib/queryKeys';
 import type {
   Page,
   FeedItem,
+  FriendsReadingItem,
   PublicProfile,
   FollowStatus,
   FriendRequest,
@@ -54,6 +55,32 @@ export function useFeed() {
       lastPage.number < lastPage.totalPages - 1
         ? lastPage.number + 1
         : undefined,
+  });
+}
+
+// ────────────────────────────────────────────────────────
+// DISC-01: Friends currently reading (horizontal scroll row, fixed first page)
+// ────────────────────────────────────────────────────────
+
+/**
+ * useFriendsReading — query for GET /feed/friends-reading?page=0&size=10
+ *
+ * Returns the first 10 books that accepted friends are CURRENTLY_READING.
+ * Uses a fixed page fetch (not infinite scroll) — the caller renders a
+ * horizontal scroll row, not an infinite list.
+ *
+ * Keyed by QUERY_KEYS.friendsReading() — invalidated when the user
+ * follows/unfollows so the row updates when the friend list changes.
+ */
+export function useFriendsReading() {
+  return useQuery({
+    queryKey: QUERY_KEYS.friendsReading(),
+    queryFn: () =>
+      api
+        .get<Page<FriendsReadingItem>>('/feed/friends-reading', {
+          params: { page: 0, size: 10 },
+        })
+        .then((r) => r.data),
   });
 }
 
@@ -103,7 +130,15 @@ export function useCurrentUserId() {
 /**
  * useFollowUser — mutation for POST /users/:userId/follow
  *
- * onSuccess: invalidates profile (isFollowing changed) and feed (new followee content).
+ * onSuccess: invalidates profile (isFollowing + follower counts changed), feed
+ * (new followee content appears), and friendsReading (new friend's in-progress
+ * books appear in the "Friends are reading" row).
+ *
+ * DISC-03 fix: exact:false on profile invalidation ensures ALL paginated profile
+ * cache entries (e.g. ['profile', userId, 0], ['profile', userId, 1]) are marked
+ * stale simultaneously — without exact:false, only the exact key is matched and
+ * paginated profile views show stale follower/following counts.
+ *
  * T-08F-02: follower identity is the JWT-authenticated user, never in the request body.
  */
 export function useFollowUser(userId: string) {
@@ -112,8 +147,11 @@ export function useFollowUser(userId: string) {
     mutationFn: () =>
       api.post<FollowStatus>(`/users/${userId}/follow`).then((r) => r.data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile(userId) });
+      // exact: false ensures all profile sub-pages (e.g. ['profile', userId, 0]) re-fetch
+      // when follower/following counts change — DISC-03 fix
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile(userId), exact: false });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.friendsReading() });
     },
   });
 }
@@ -121,15 +159,19 @@ export function useFollowUser(userId: string) {
 /**
  * useUnfollowUser — mutation for DELETE /users/:userId/follow
  *
- * onSuccess: invalidates the same two keys as useFollowUser so UI reflects the new state.
+ * onSuccess: invalidates the same three keys as useFollowUser so UI reflects the new state.
+ * DISC-03 fix: exact:false on profile invalidation (same rationale as useFollowUser).
  */
 export function useUnfollowUser(userId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => api.delete(`/users/${userId}/follow`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile(userId) });
+      // exact: false ensures all profile sub-pages (e.g. ['profile', userId, 0]) re-fetch
+      // when follower/following counts change — DISC-03 fix
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile(userId), exact: false });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.friendsReading() });
     },
   });
 }
