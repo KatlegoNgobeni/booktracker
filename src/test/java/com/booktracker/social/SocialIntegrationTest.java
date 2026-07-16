@@ -579,6 +579,149 @@ class SocialIntegrationTest {
     }
 
     // ----------------------------------------------------------------
+    // DISC-01: Friends-Reading Endpoint (Phase 15 — Wave 1 RED tests)
+    // These tests will fail with 404 until Plan 02 adds GET /api/feed/friends-reading.
+    // ----------------------------------------------------------------
+
+    /**
+     * DISC-01 + positive: GET /api/feed/friends-reading returns 200 with CURRENTLY_READING
+     * entries from accepted friends.
+     *
+     * <p>Setup:
+     * <ol>
+     *   <li>Alice (the authenticated user) and Bob are registered</li>
+     *   <li>Bob has a CURRENTLY_READING entry seeded directly via ShelfRepository</li>
+     *   <li>Alice sends a friend request to Bob; Bob accepts it (ACCEPTED status)</li>
+     *   <li>Alice calls GET /api/feed/friends-reading</li>
+     * </ol>
+     *
+     * <p>Assertions:
+     * <ul>
+     *   <li>Response status is 200</li>
+     *   <li>Response body has {@code content} array of length >= 1</li>
+     *   <li>First item's {@code bookOlKey} matches the seeded book's short OL key</li>
+     *   <li>First item's {@code bookTitle} matches the seeded book title</li>
+     * </ul>
+     *
+     * <p><strong>RED phase:</strong> Fails with 404 until Plan 02 adds the endpoint.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void friendsReadingEndpointReturnsCurrentlyReadingBooks() {
+        // Register Alice (current user already set up in @BeforeEach) and Bob
+        UserInfo bob = registerUser("friendsreadbob");
+
+        // Seed a CURRENTLY_READING entry for Bob
+        UserBookEntity bobEntry = seedCurrentlyReadingEntry(bob.userId);
+        String bobBookOlKey = extractShortOlKey(bobEntry.getBook().getOpenLibraryKey());
+        String bobBookTitle = bobEntry.getBook().getTitle();
+
+        // Alice sends a friend request to Bob; Bob accepts
+        Map<String, Object> reqBody = Map.of("recipientId", bob.userId);
+        ResponseEntity<Map> sendResp = restTemplate.exchange(
+            "/api/friend-requests",
+            HttpMethod.POST,
+            new HttpEntity<>(reqBody, bearerHeaders()),
+            Map.class);
+        assertThat(sendResp.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        String requestId = sendResp.getBody().get("id").toString();
+
+        restTemplate.exchange(
+            "/api/friend-requests/" + requestId + "/accept",
+            HttpMethod.PUT,
+            new HttpEntity<>(bearerHeadersFor(bob.token)),
+            Map.class);
+
+        // Alice calls GET /api/feed/friends-reading — should see Bob's CURRENTLY_READING book
+        ResponseEntity<Map> response = restTemplate.exchange(
+            "/api/feed/friends-reading",
+            HttpMethod.GET,
+            new HttpEntity<>(bearerHeaders()),
+            Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Map<?, ?> body = response.getBody();
+        assertThat(body).isNotNull();
+        List<?> content = (List<?>) body.get("content");
+        assertThat(content).hasSizeGreaterThanOrEqualTo(1);
+
+        // Verify the returned item matches Bob's seeded book
+        Map<?, ?> item = (Map<?, ?>) content.get(0);
+        assertThat(item.get("bookOlKey")).isEqualTo(bobBookOlKey);
+        assertThat(item.get("bookTitle")).isEqualTo(bobBookTitle);
+    }
+
+    /**
+     * DISC-01 + negative: GET /api/feed/friends-reading does NOT return books from non-friends.
+     *
+     * <p>Carol is registered and has a CURRENTLY_READING book. Alice has NO friend relationship
+     * with Carol. Alice's friends-reading feed must not contain Carol's book.
+     *
+     * <p><strong>RED phase:</strong> Fails with 404 until Plan 02 adds the endpoint.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    void friendsReadingDoesNotReturnNonFriendsBooks() {
+        // Register Carol (no friend relationship with Alice)
+        UserInfo carol = registerUser("friendsreadcarol");
+
+        // Seed a CURRENTLY_READING entry for Carol
+        UserBookEntity carolEntry = seedCurrentlyReadingEntry(carol.userId);
+        String carolBookOlKey = extractShortOlKey(carolEntry.getBook().getOpenLibraryKey());
+
+        // Alice calls GET /api/feed/friends-reading — should NOT see Carol's book
+        ResponseEntity<Map> response = restTemplate.exchange(
+            "/api/feed/friends-reading",
+            HttpMethod.GET,
+            new HttpEntity<>(bearerHeaders()),
+            Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Map<?, ?> body = response.getBody();
+        assertThat(body).isNotNull();
+        List<?> content = (List<?>) body.get("content");
+
+        // Carol's book olKey must NOT appear in any content item
+        boolean carolBookPresent = content.stream()
+            .filter(i -> i instanceof Map)
+            .map(i -> (Map<?, ?>) i)
+            .anyMatch(i -> carolBookOlKey.equals(i.get("bookOlKey")));
+        assertThat(carolBookPresent).isFalse();
+    }
+
+    /**
+     * Seed a CURRENTLY_READING {@link UserBookEntity} directly for the given userId.
+     * Mirrors {@link #seedReadEntry} but uses {@link ShelfStatus#CURRENTLY_READING}.
+     *
+     * @param userId UUID string of the user to seed the entry for
+     * @return the persisted UserBookEntity
+     */
+    private UserBookEntity seedCurrentlyReadingEntry(String userId) {
+        BookEntity book = seedBook();
+        com.booktracker.user.UserEntity user = userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(() -> new RuntimeException("Test user not found: " + userId));
+
+        UserBookEntity entry = new UserBookEntity();
+        entry.setUser(user);
+        entry.setBook(book);
+        entry.setShelfStatus(ShelfStatus.CURRENTLY_READING);
+        entry.setCurrentPage(50);
+        return shelfRepository.save(entry);
+    }
+
+    /**
+     * Extract the short OL key (e.g. "OL5SW") from the full OL key stored in the DB
+     * (e.g. "/works/OL5SW"). The friends-reading DTO returns the short form.
+     *
+     * @param fullKey the full Open Library key as stored in BookEntity (e.g. "/works/OL5SW")
+     * @return the short form (everything after the last "/")
+     */
+    private String extractShortOlKey(String fullKey) {
+        int slash = fullKey.lastIndexOf('/');
+        return slash >= 0 ? fullKey.substring(slash + 1) : fullKey;
+    }
+
+    // ----------------------------------------------------------------
     // Private helper record
     // ----------------------------------------------------------------
 
