@@ -135,6 +135,7 @@ export function FeedPage() {
   const {
     data: friendsReadingData,
     isPending: friendsReadingPending,
+    isError: friendsReadingError,
   } = useFriendsReading();
 
   // Discovery: Up next for you (WANT_TO_READ shelf)
@@ -180,6 +181,10 @@ export function FeedPage() {
       <DiscoverySection title="Friends are reading">
         {friendsReadingPending ? (
           <InlineSkeletonRow />
+        ) : friendsReadingError ? (
+          <p className="text-xs text-muted-foreground py-2 px-1 flex-shrink-0">
+            Couldn&apos;t load friends&apos; reading activity. Pull to refresh.
+          </p>
         ) : friendsReadingItems.length > 0 ? (
           friendsReadingItems.map((item) => (
             <DiscoveryBookCard

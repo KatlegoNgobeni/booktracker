@@ -243,6 +243,7 @@ export function useAcceptFriendRequest(requestId: string) {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.pendingReceived() });
       queryClient.invalidateQueries({ queryKey: ['userSearch'] });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.friendsReading() });
     },
   });
 }

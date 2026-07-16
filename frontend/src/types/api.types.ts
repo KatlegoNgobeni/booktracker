@@ -179,8 +179,8 @@ export interface FriendsReadingItem {
   displayName: string;
   bookTitle: string;
   bookOlKey: string;
-  bookCoverId: string | null;
-  bookAuthors: string | null;
+  bookCoverId?: string | null;
+  bookAuthors?: string | null;
 }
 
 // ────────────────────────────────────────────────────────

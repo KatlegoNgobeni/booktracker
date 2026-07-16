@@ -38,7 +38,6 @@ function makeClient() {
 function makeWrapper(client: QueryClient) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      // @ts-expect-error — JSX in .ts file; vitest transforms this correctly
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (QueryClientProvider as any)({ client, children })
     );
