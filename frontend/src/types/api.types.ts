@@ -163,6 +163,26 @@ export interface FollowStatus {
   following: boolean;
 }
 
+/**
+ * FriendsReadingItem — TypeScript mirror of FriendsReadingItemDto.java (DISC-01)
+ *
+ * Returned by GET /api/feed/friends-reading (Page<FriendsReadingItemDto>).
+ * Used by useFriendsReading() hook in useSocial.ts to populate the
+ * "Friends are reading" horizontal-scroll row.
+ *
+ * Nullable fields: bookCoverId (books without Open Library covers) and
+ * bookAuthors (comma-joined string; null when author data is absent).
+ */
+export interface FriendsReadingItem {
+  entryId: string;
+  userId: string;
+  displayName: string;
+  bookTitle: string;
+  bookOlKey: string;
+  bookCoverId: string | null;
+  bookAuthors: string | null;
+}
+
 // ────────────────────────────────────────────────────────
 // Discovery & friend-request types (Phase 9 — DISC-01/02/03/04)
 // Derived from: FriendStatus.java, FriendRequestDto.java, UserSearchResultDto.java
