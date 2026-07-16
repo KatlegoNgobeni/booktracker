@@ -84,8 +84,7 @@ export function ProfilePage() {
             </div>
             {socialProfile && (
               <div className="flex gap-6 text-sm">
-                <span><strong className="text-foreground">{socialProfile.followerCount}</strong> <span className="text-muted-foreground">followers</span></span>
-                <span><strong className="text-foreground">{socialProfile.followingCount}</strong> <span className="text-muted-foreground">following</span></span>
+                <span><strong className="text-foreground">{socialProfile.friendCount}</strong> <span className="text-muted-foreground">friends</span></span>
               </div>
             )}
           </div>

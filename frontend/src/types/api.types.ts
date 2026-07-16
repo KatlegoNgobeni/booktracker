@@ -112,8 +112,8 @@ export interface Page<T> {
 }
 
 // ────────────────────────────────────────────────────────
-// Social layer types (Phase 8 — SOCIAL-01/02/03)
-// Derived from: PublicShelfEntryDto, PublicProfileDto, FeedItemDto, FollowStatusDto
+// Social layer types (SOCIAL-02/03)
+// Derived from: PublicShelfEntryDto, PublicProfileDto, FeedItemDto
 // ────────────────────────────────────────────────────────
 
 // Derived from PublicShelfEntryDto.java
@@ -134,9 +134,7 @@ export interface PublicShelfEntry {
 export interface PublicProfile {
   userId: string;
   displayName: string;
-  followerCount: number;
-  followingCount: number;
-  isFollowing: boolean;          // does the authenticated user follow this profile?
+  friendCount: number;
   goalTarget?: number;           // absent if no goal set
   goalProgressPercent?: number;  // absent if no goal set; capped at 100.0
   booksReadThisYear: number;
@@ -156,11 +154,6 @@ export interface FeedItem {
   review: string | null;
   dateFinished: string;      // ISO date YYYY-MM-DD (relative timestamp)
   createdAt: string;         // ISO OffsetDateTime (entry creation time)
-}
-
-// Derived from FollowStatusDto.java
-export interface FollowStatus {
-  following: boolean;
 }
 
 /**

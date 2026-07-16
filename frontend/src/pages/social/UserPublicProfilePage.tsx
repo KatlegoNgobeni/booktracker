@@ -1,22 +1,16 @@
 /**
  * UserPublicProfilePage.tsx — Public profile at /users/:id (SOCIAL-02)
  *
- * Displays: display name, follower/following counts, goal progress, READ shelf grid.
+ * Displays: display name, friend count, goal progress, READ shelf grid.
  *
  * Security:
  * - T-08F-01: Renders only fields the backend returns (READ entries only).
  *   Backend enforces visibility; client never fetches WANT_TO_READ / CURRENTLY_READING.
- * - T-08F-03: Follow button hidden when profile.userId equals current-user id (Pitfall 5).
- *
- * The FollowButton parent-visibility contract:
- *   Only render <FollowButton> when the current user is NOT viewing their own profile.
- *   The button itself has no self-awareness; the page makes the decision.
  */
 import { useParams } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { Heart } from 'lucide-react';
-import { usePublicProfile, useCurrentUserId, useLikeReview, useUnlikeReview } from '../../hooks/useSocial';
-import { FollowButton } from '../../components/shared/FollowButton';
+import { usePublicProfile, useLikeReview, useUnlikeReview } from '../../hooks/useSocial';
 import { BookCoverImage } from '../../components/shared/BookCoverImage';
 import { StarRating } from '../../components/shared/StarRating';
 import { UserAvatar } from '../../components/shared/UserAvatar';
@@ -29,24 +23,18 @@ import type { PublicShelfEntry } from '../../types/api.types';
 
 function ProfileHeader({
   displayName,
-  followerCount,
-  followingCount,
+  friendCount,
   goalTarget,
   goalProgressPercent,
   booksReadThisYear,
   userId,
-  isFollowing,
-  showFollowButton,
 }: {
   displayName: string;
-  followerCount: number;
-  followingCount: number;
+  friendCount: number;
   goalTarget?: number;
   goalProgressPercent?: number;
   booksReadThisYear: number;
   userId: string;
-  isFollowing: boolean;
-  showFollowButton: boolean;
 }) {
   return (
     <div className="flex flex-col gap-3 pb-3 border-b">
@@ -56,18 +44,12 @@ function ProfileHeader({
           <UserAvatar userId={userId} displayName={displayName} size="lg" />
           <h1 className="text-xl font-semibold leading-tight">{displayName}</h1>
         </div>
-        {showFollowButton && (
-          <FollowButton userId={userId} isFollowing={isFollowing} />
-        )}
       </div>
 
-      {/* Follower / Following counts */}
+      {/* Friend count */}
       <div className="flex gap-4 text-sm text-muted-foreground">
         <span>
-          <strong className="text-foreground">{followerCount}</strong> followers
-        </span>
-        <span>
-          <strong className="text-foreground">{followingCount}</strong> following
+          <strong className="text-foreground">{friendCount}</strong> friends
         </span>
       </div>
 
@@ -155,8 +137,6 @@ function ReadBookCard({
 export function UserPublicProfilePage() {
   const { id = '' } = useParams<{ id: string }>();
   const { data: profile, isPending, isError } = usePublicProfile(id);
-  // Used to hide the Follow button on own profile (RESEARCH Pitfall 5)
-  const { data: currentUserId } = useCurrentUserId();
 
   if (isPending) {
     return (
@@ -182,22 +162,17 @@ export function UserPublicProfilePage() {
     );
   }
 
-  // T-08F-03: Hide Follow button when viewing own profile (Pitfall 5)
-  const showFollowButton = !!currentUserId && currentUserId !== profile.userId;
   const readEntries = profile.readEntries.content;
 
   return (
     <div className="pb-4">
       <ProfileHeader
         displayName={profile.displayName}
-        followerCount={profile.followerCount}
-        followingCount={profile.followingCount}
+        friendCount={profile.friendCount}
         goalTarget={profile.goalTarget}
         goalProgressPercent={profile.goalProgressPercent}
         booksReadThisYear={profile.booksReadThisYear}
         userId={profile.userId}
-        isFollowing={profile.isFollowing}
-        showFollowButton={showFollowButton}
       />
 
       <div>

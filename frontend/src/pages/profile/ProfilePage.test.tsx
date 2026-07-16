@@ -175,7 +175,7 @@ describe('ProfilePage — user switch regression (UAT test 3)', () => {
       url === '/users/me'
         ? Promise.resolve({ data: currentUser })
         : Promise.resolve({
-            data: { followerCount: 0, followingCount: 0, entries: [] },
+            data: { friendCount: 0, readEntries: { content: [], number: 0, size: 20, totalPages: 0, totalElements: 0 }, booksReadThisYear: 0 },
           })) as never);
 
     // Mount 1: user A signs in and views their profile.

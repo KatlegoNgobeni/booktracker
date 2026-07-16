@@ -1,7 +1,6 @@
 package com.booktracker.social;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.data.domain.Page;
 
 /**
@@ -17,18 +16,13 @@ import org.springframework.data.domain.Page;
  *       generic serialization requirements that are handled better via explicit getters.</li>
  *   <li>{@code @JsonInclude} on individual fields requires non-record semantics.</li>
  * </ul>
- *
- * <p>The {@code isFollowing} getter is named {@code isFollowing()} (boolean convention)
- * so Jackson serializes it as {@code "isFollowing"} in the JSON output.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class PublicProfileDto {
 
     private String userId;
     private String displayName;
-    private long followerCount;
-    private long followingCount;
-    private boolean isFollowing;
+    private long friendCount;
     private Integer goalTarget;
     private Double goalProgressPercent;
     private long booksReadThisYear;
@@ -37,18 +31,14 @@ public class PublicProfileDto {
     public PublicProfileDto(
             String userId,
             String displayName,
-            long followerCount,
-            long followingCount,
-            boolean isFollowing,
+            long friendCount,
             Integer goalTarget,
             Double goalProgressPercent,
             long booksReadThisYear,
             Page<PublicShelfEntryDto> readEntries) {
         this.userId = userId;
         this.displayName = displayName;
-        this.followerCount = followerCount;
-        this.followingCount = followingCount;
-        this.isFollowing = isFollowing;
+        this.friendCount = friendCount;
         this.goalTarget = goalTarget;
         this.goalProgressPercent = goalProgressPercent;
         this.booksReadThisYear = booksReadThisYear;
@@ -67,17 +57,8 @@ public class PublicProfileDto {
         return displayName;
     }
 
-    public long getFollowerCount() {
-        return followerCount;
-    }
-
-    public long getFollowingCount() {
-        return followingCount;
-    }
-
-    @JsonProperty("isFollowing")
-    public boolean isFollowing() {
-        return isFollowing;
+    public long getFriendCount() {
+        return friendCount;
     }
 
     public Integer getGoalTarget() {

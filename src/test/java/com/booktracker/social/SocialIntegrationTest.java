@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration tests for the social endpoints (SOCIAL-01, SOCIAL-02, SOCIAL-03).
+ * Integration tests for the social endpoints (SOCIAL-02, SOCIAL-03).
  *
  * <p>Uses:
  * <ul>
@@ -44,20 +44,13 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>Per-test unique user registration (AtomicInteger counter) ensures no cross-test
  * state contamination when tests share the same Testcontainers DB.
  *
- * <p>All 13 behaviors from the RESEARCH Validation Architecture are covered:
+ * <p>Behaviors covered:
  * <ul>
- *   <li>SOCIAL-01 (follow/unfollow): followReturns201, selfFollowReturns400,
- *       duplicateFollowReturns409, followNonExistentReturns404, unfollowReturns204,
- *       unfollowNotFollowingReturns404, unauthFollowReturns401</li>
  *   <li>SOCIAL-02 (public profile): publicProfileReturnsReadEntries,
  *       publicProfileExcludesNonRead, publicProfileUnknownUserReturns404</li>
  *   <li>SOCIAL-03 (feed): feedShowsFolloweeBooks, emptyFeedWhenNoFollowees,
  *       feedOrderedByDateDesc</li>
  * </ul>
- *
- * <p><strong>RED phase:</strong> All 13 tests fail when SocialService and SocialController
- * do not yet exist (Task 1 creates this file). Task 2 (SocialService) and Task 3
- * (SocialController) turn them GREEN.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
@@ -224,153 +217,6 @@ class SocialIntegrationTest {
     }
 
     // ----------------------------------------------------------------
-    // SOCIAL-01: Follow / Unfollow
-    // ----------------------------------------------------------------
-
-    /**
-     * SOCIAL-01: POST /api/users/{id}/follow with valid followee → 201 + {following:true}.
-     */
-    @Test
-    @SuppressWarnings("unchecked")
-    void followReturns201() {
-        UserInfo other = registerUser("followee");
-
-        ResponseEntity<Map> response = restTemplate.exchange(
-            "/api/users/" + other.userId + "/follow",
-            HttpMethod.POST,
-            new HttpEntity<>(bearerHeaders()),
-            Map.class);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        Map<?, ?> body = response.getBody();
-        assertThat(body).isNotNull();
-        assertThat(body.get("following")).isEqualTo(true);
-    }
-
-    /**
-     * SOCIAL-01: POST /api/users/{myOwnId}/follow → 400 (self-follow prevented at service layer).
-     */
-    @Test
-    @SuppressWarnings("unchecked")
-    void selfFollowReturns400() {
-        ResponseEntity<Map> response = restTemplate.exchange(
-            "/api/users/" + currentUserId + "/follow",
-            HttpMethod.POST,
-            new HttpEntity<>(bearerHeaders()),
-            Map.class);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-    }
-
-    /**
-     * SOCIAL-01 + Pitfall 1: Follow the same user twice → 409 + "Already following this user"
-     * (NOT "Email already registered" from GlobalExceptionHandler).
-     */
-    @Test
-    @SuppressWarnings("unchecked")
-    void duplicateFollowReturns409() {
-        UserInfo other = registerUser("dupfollowee");
-
-        // First follow — should succeed
-        ResponseEntity<Map> first = restTemplate.exchange(
-            "/api/users/" + other.userId + "/follow",
-            HttpMethod.POST,
-            new HttpEntity<>(bearerHeaders()),
-            Map.class);
-        assertThat(first.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-
-        // Second follow — duplicate → 409
-        ResponseEntity<Map> second = restTemplate.exchange(
-            "/api/users/" + other.userId + "/follow",
-            HttpMethod.POST,
-            new HttpEntity<>(bearerHeaders()),
-            Map.class);
-        assertThat(second.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-
-        Map<?, ?> body = second.getBody();
-        assertThat(body).isNotNull();
-        // Must NOT say "Email already registered" (Pitfall 1)
-        assertThat(body.get("message")).isEqualTo("Already following this user");
-    }
-
-    /**
-     * SOCIAL-01: POST /api/users/{randomUUID}/follow where user does not exist → 404.
-     */
-    @Test
-    @SuppressWarnings("unchecked")
-    void followNonExistentReturns404() {
-        String randomId = UUID.randomUUID().toString();
-
-        ResponseEntity<Map> response = restTemplate.exchange(
-            "/api/users/" + randomId + "/follow",
-            HttpMethod.POST,
-            new HttpEntity<>(bearerHeaders()),
-            Map.class);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-    }
-
-    /**
-     * SOCIAL-01: DELETE /api/users/{id}/follow when following → 204 No Content.
-     */
-    @Test
-    void unfollowReturns204() {
-        UserInfo other = registerUser("unfollowee");
-
-        // Follow first
-        restTemplate.exchange(
-            "/api/users/" + other.userId + "/follow",
-            HttpMethod.POST,
-            new HttpEntity<>(bearerHeaders()),
-            Map.class);
-
-        // Unfollow
-        ResponseEntity<Void> response = restTemplate.exchange(
-            "/api/users/" + other.userId + "/follow",
-            HttpMethod.DELETE,
-            new HttpEntity<>(bearerHeaders()),
-            Void.class);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-    }
-
-    /**
-     * SOCIAL-01: DELETE /api/users/{id}/follow when NOT following → 404.
-     */
-    @Test
-    @SuppressWarnings("unchecked")
-    void unfollowNotFollowingReturns404() {
-        UserInfo other = registerUser("notfollowee");
-
-        ResponseEntity<Map> response = restTemplate.exchange(
-            "/api/users/" + other.userId + "/follow",
-            HttpMethod.DELETE,
-            new HttpEntity<>(bearerHeaders()),
-            Map.class);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-    }
-
-    /**
-     * SOCIAL-01: POST /api/users/{id}/follow with no JWT → 401 Unauthorized
-     * (handled by existing SecurityConfig AuthenticationEntryPoint).
-     */
-    @Test
-    @SuppressWarnings("unchecked")
-    void unauthFollowReturns401() {
-        UserInfo other = registerUser("unauthfollowee");
-
-        // No Authorization header
-        ResponseEntity<Map> response = restTemplate.exchange(
-            "/api/users/" + other.userId + "/follow",
-            HttpMethod.POST,
-            new HttpEntity<>(new HttpHeaders()),
-            Map.class);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-    }
-
-    // ----------------------------------------------------------------
     // SOCIAL-02: Public Profile
     // ----------------------------------------------------------------
 
@@ -397,8 +243,7 @@ class SocialIntegrationTest {
         assertThat(body).isNotNull();
         assertThat(body.get("displayName")).isNotNull();
         assertThat(body.get("userId")).isEqualTo(target.userId);
-        assertThat(body.get("followerCount")).isNotNull();
-        assertThat(body.get("followingCount")).isNotNull();
+        assertThat(body.get("friendCount")).isNotNull();
 
         Map<?, ?> readEntries = (Map<?, ?>) body.get("readEntries");
         assertThat(readEntries).isNotNull();

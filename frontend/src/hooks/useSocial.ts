@@ -1,13 +1,8 @@
 /**
- * useSocial.ts — TanStack Query hooks for the social layer (Phase 8)
+ * useSocial.ts — TanStack Query hooks for the social layer
  *
- * SOCIAL-01: useFollowUser / useUnfollowUser — follow toggle mutations
  * SOCIAL-02: usePublicProfile — public profile query (READ entries only)
- * SOCIAL-03: useFeed — infinite-scroll activity feed of followed users' finishes
- *
- * Security notes:
- * - T-08F-02: follower identity comes from the JWT interceptor, never the request body
- * - T-08F-03: Follow button visibility is the caller's responsibility (hide for own profile)
+ * SOCIAL-03: useFeed — infinite-scroll activity feed of friends' finishes
  *
  * TanStack Query v5 notes:
  * - Use isPending (not isLoading) for initial fetch state
@@ -27,7 +22,6 @@ import type {
   FeedItem,
   FriendsReadingItem,
   PublicProfile,
-  FollowStatus,
   FriendRequest,
   UserSearchResult,
 } from '../types/api.types';
@@ -41,7 +35,7 @@ import type {
  * useFeed — infinite query for GET /feed?page=N&size=20
  *
  * Flattened: data.pages.flatMap(p => p.content) gives the full feed list.
- * Keyed by QUERY_KEYS.feed() — invalidated when the user follows/unfollows.
+ * Keyed by QUERY_KEYS.feed() — invalidated when friend requests are accepted or rejected.
  */
 export function useFeed() {
   return useInfiniteQuery({
@@ -69,8 +63,8 @@ export function useFeed() {
  * Uses a fixed page fetch (not infinite scroll) — the caller renders a
  * horizontal scroll row, not an infinite list.
  *
- * Keyed by QUERY_KEYS.friendsReading() — invalidated when the user
- * follows/unfollows so the row updates when the friend list changes.
+ * Keyed by QUERY_KEYS.friendsReading() — invalidated when friend requests are accepted
+ * so the row updates when the friend list changes.
  */
 export function useFriendsReading() {
   return useQuery({
@@ -106,73 +100,20 @@ export function usePublicProfile(userId: string, page = 0) {
 }
 
 // ────────────────────────────────────────────────────────
-// Current user identity (used to hide Follow button on own profile — Pitfall 5)
+// Current user identity (used to show/hide action buttons on profiles)
 // ────────────────────────────────────────────────────────
 
 /**
  * useCurrentUserId — query for GET /users/me → extracts the id field.
  *
  * Keyed by QUERY_KEYS.me() — already in cache if the profile page was previously loaded.
- * Used in UserPublicProfilePage to compare against profile.userId (RESEARCH Pitfall 5).
+ * Used in UserPublicProfilePage to compare against profile.userId.
  */
 export function useCurrentUserId() {
   return useQuery({
     queryKey: QUERY_KEYS.me(),
     queryFn: () =>
       api.get<{ id: string }>('/users/me').then((r) => r.data.id),
-  });
-}
-
-// ────────────────────────────────────────────────────────
-// SOCIAL-01: Follow / Unfollow mutations
-// ────────────────────────────────────────────────────────
-
-/**
- * useFollowUser — mutation for POST /users/:userId/follow
- *
- * onSuccess: invalidates profile (isFollowing + follower counts changed), feed
- * (new followee content appears), and friendsReading (new friend's in-progress
- * books appear in the "Friends are reading" row).
- *
- * DISC-03 fix: exact:false on profile invalidation ensures ALL paginated profile
- * cache entries (e.g. ['profile', userId, 0], ['profile', userId, 1]) are marked
- * stale simultaneously — without exact:false, only the exact key is matched and
- * paginated profile views show stale follower/following counts.
- *
- * T-08F-02: follower identity is the JWT-authenticated user, never in the request body.
- */
-export function useFollowUser(userId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () =>
-      api.post<FollowStatus>(`/users/${userId}/follow`).then((r) => r.data),
-    onSuccess: () => {
-      // exact: false ensures all profile sub-pages (e.g. ['profile', userId, 0]) re-fetch
-      // when follower/following counts change — DISC-03 fix
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile(userId), exact: false });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed() });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.friendsReading() });
-    },
-  });
-}
-
-/**
- * useUnfollowUser — mutation for DELETE /users/:userId/follow
- *
- * onSuccess: invalidates the same three keys as useFollowUser so UI reflects the new state.
- * DISC-03 fix: exact:false on profile invalidation (same rationale as useFollowUser).
- */
-export function useUnfollowUser(userId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () => api.delete(`/users/${userId}/follow`),
-    onSuccess: () => {
-      // exact: false ensures all profile sub-pages (e.g. ['profile', userId, 0]) re-fetch
-      // when follower/following counts change — DISC-03 fix
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.profile(userId), exact: false });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.feed() });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.friendsReading() });
-    },
   });
 }
 

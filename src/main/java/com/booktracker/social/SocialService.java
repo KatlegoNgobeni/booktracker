@@ -7,7 +7,6 @@ import com.booktracker.shelf.ShelfStatus;
 import com.booktracker.shelf.UserBookEntity;
 import com.booktracker.user.UserEntity;
 import com.booktracker.user.UserRepository;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -19,29 +18,18 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 /**
- * Business logic for the social layer: follow, unfollow, public profile, and activity feed.
+ * Business logic for the social layer: public profile and activity feed.
  *
  * <p><strong>Security invariants (threat model):</strong>
  * <ul>
- *   <li>T-08-01: {@code follower} is always {@code currentUser} from JWT — never from request body.</li>
  *   <li>T-08-02: Feed query is scoped to {@code currentUser.getId()} — no userId from HTTP.</li>
  *   <li>T-08-03: Profile returns only {@code shelfStatus = READ} — WANT_TO_READ/CURRENTLY_READING private.</li>
- *   <li>T-08-04: Unfollow uses {@code findByFollowerIdAndFolloweeId(currentUser.getId(), followeeId)}
- *       — only the caller's own follow row is deleted.</li>
- *   <li>T-08-05: Self-follow is caught at service layer before any DB write — 400 BAD_REQUEST.</li>
  * </ul>
  *
  * <p><strong>Transactional import:</strong> Uses {@code org.springframework.transaction.annotation.Transactional}
  * (Spring), NOT {@code jakarta.transaction.Transactional} — avoids Pitfall 6 (CLAUDE.md §Version Gotchas).
  *
  * <p><strong>Constructor injection</strong> — no {@code @Autowired} field injection (CLAUDE.md).
- *
- * <p><strong>Duplicate follow handling (RESEARCH Pitfall 1):</strong>
- * {@code DataIntegrityViolationException} from the {@code follows_pair_uq} constraint is caught
- * in {@link #follow} and thrown as 409 with "Already following this user" — MUST NOT reach
- * {@code GlobalExceptionHandler.handleDuplicate} which returns "Email already registered".
- * Uses {@code saveAndFlush()} to force the constraint check inside the try block (same pattern
- * as {@code ShelfService.addToShelf}).
  *
  * <p><strong>Goal progress (RESEARCH Assumption A4):</strong>
  * {@link #computeGoalProgress} is duplicated from {@code StatsService} rather than extracted
@@ -50,90 +38,22 @@ import java.util.UUID;
 @Service
 public class SocialService {
 
-    private final FollowRepository followRepository;
     private final UserRepository userRepository;
     private final ShelfRepository shelfRepository;
     private final GoalRepository goalRepository;
     private final FriendRequestRepository friendRequestRepository;
     private final LikeRepository likeRepository;
 
-    public SocialService(FollowRepository followRepository,
-                         UserRepository userRepository,
+    public SocialService(UserRepository userRepository,
                          ShelfRepository shelfRepository,
                          GoalRepository goalRepository,
                          FriendRequestRepository friendRequestRepository,
                          LikeRepository likeRepository) {
-        this.followRepository = followRepository;
         this.userRepository = userRepository;
         this.shelfRepository = shelfRepository;
         this.goalRepository = goalRepository;
         this.friendRequestRepository = friendRequestRepository;
         this.likeRepository = likeRepository;
-    }
-
-    /**
-     * Follow another user.
-     *
-     * <p>Steps:
-     * <ol>
-     *   <li>Reject self-follow — 400 (T-08-05, Pitfall 6 — service check before DB constraint)</li>
-     *   <li>Verify followee exists — 404 if not (T-08-06)</li>
-     *   <li>Persist FollowEntity via {@code saveAndFlush()} — forces constraint check inside try</li>
-     *   <li>Catch {@link DataIntegrityViolationException} → 409 "Already following this user" (Pitfall 1)</li>
-     * </ol>
-     *
-     * @param followeeId  the UUID of the user to follow (from @PathVariable)
-     * @param currentUser the authenticated user (from @AuthenticationPrincipal — T-08-01)
-     * @return {@link FollowStatusDto}({@code following=true})
-     * @throws ResponseStatusException 400 if self-follow; 404 if followee not found; 409 if already following
-     */
-    @Transactional
-    public FollowStatusDto follow(UUID followeeId, UserEntity currentUser) {
-        // T-08-05: Self-follow check at service layer — friendlier message than DB constraint (Pitfall 6)
-        if (followeeId.equals(currentUser.getId())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot follow yourself");
-        }
-
-        // T-08-06: Verify followee exists
-        UserEntity followee = userRepository.findById(followeeId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-
-        FollowEntity follow = new FollowEntity();
-        follow.setFollower(currentUser);
-        follow.setFollowee(followee);
-
-        try {
-            // saveAndFlush forces the SQL INSERT within the transaction so
-            // DataIntegrityViolationException fires here (not at commit),
-            // allowing us to catch it and return 409 before GlobalExceptionHandler
-            // gets a chance to return "Email already registered" (Pitfall 1).
-            followRepository.saveAndFlush(follow);
-        } catch (DataIntegrityViolationException e) {
-            // follows_pair_uq constraint fired — already following this user.
-            // Must NOT reach GlobalExceptionHandler.handleDuplicate (returns "Email already registered").
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Already following this user");
-        }
-
-        return new FollowStatusDto(true);
-    }
-
-    /**
-     * Unfollow a user.
-     *
-     * <p>Looks up the follow relationship scoped to {@code currentUser.getId()} as follower (T-08-04).
-     * Returns 404 if the relationship does not exist.
-     *
-     * @param followeeId  the UUID of the user to unfollow (from @PathVariable)
-     * @param currentUser the authenticated user (from @AuthenticationPrincipal — T-08-01)
-     * @throws ResponseStatusException 404 if not currently following this user
-     */
-    @Transactional
-    public void unfollow(UUID followeeId, UserEntity currentUser) {
-        FollowEntity follow = followRepository
-                .findByFollowerIdAndFolloweeId(currentUser.getId(), followeeId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Not following this user"));
-        followRepository.delete(follow);
     }
 
     /**
@@ -143,16 +63,14 @@ public class SocialService {
      * are private). Reuses existing {@link ShelfRepository} and {@link GoalRepository}
      * queries — no new aggregation logic (RESEARCH Pattern 4).
      *
-     * <p>8 queries total:
+     * <p>6 queries total:
      * <ol>
      *   <li>userRepository.findById</li>
      *   <li>shelfRepository.findByUserAndShelfStatus (READ, paginated)</li>
      *   <li>count query (Pageable)</li>
      *   <li>goalRepository.findByUserIdAndYear</li>
      *   <li>shelfRepository.countBooksReadThisYear</li>
-     *   <li>followRepository.countByFolloweeId</li>
-     *   <li>followRepository.countByFollowerId</li>
-     *   <li>followRepository.existsByFollowerIdAndFolloweeId</li>
+     *   <li>friendRequestRepository.countAcceptedFriends</li>
      * </ol>
      *
      * @param targetId    UUID of the user whose profile is being viewed
@@ -180,13 +98,8 @@ public class SocialService {
 
         long booksReadThisYear = shelfRepository.countBooksReadThisYear(targetId, currentYear);
 
-        // Follow counts for the target
-        long followerCount = followRepository.countByFolloweeId(targetId);
-        long followingCount = followRepository.countByFollowerId(targetId);
-
-        // isFollowing: does the current viewer follow the target?
-        boolean isFollowing = followRepository.existsByFollowerIdAndFolloweeId(
-                currentUser.getId(), targetId);
+        // Friend count: number of accepted mutual friends for the target
+        long friendCount = friendRequestRepository.countAcceptedFriends(targetId);
 
         Double goalProgressPercent = computeGoalProgress(booksReadThisYear, goalTarget);
 
@@ -196,9 +109,7 @@ public class SocialService {
         return new PublicProfileDto(
                 target.getId().toString(),
                 target.getDisplayName(),
-                followerCount,
-                followingCount,
-                isFollowing,
+                friendCount,
                 goalTarget,
                 goalProgressPercent,
                 booksReadThisYear,
@@ -210,11 +121,6 @@ public class SocialService {
      * Get the activity feed for the authenticated user — a paginated list of READ shelf
      * entries from accepted friends in either direction, ordered by dateFinished DESC.
      *
-     * <p><strong>D-03 — Feed switches to mutual friends:</strong>
-     * The feed now queries {@code friend_requests} (ACCEPTED, bidirectional) instead of
-     * {@code follows}. "People I'm friends with" means ACCEPTED rows where the current user
-     * is either the requester or the recipient.
-     *
      * <p>Feed is scoped to {@code currentUser.getId()} from JWT — no userId from HTTP (T-08-02).
      *
      * @param pageable    page/size for the feed
@@ -223,7 +129,6 @@ public class SocialService {
      */
     @Transactional(readOnly = true)
     public Page<FeedItemDto> getFeed(Pageable pageable, UserEntity currentUser) {
-        // D-03: Feed scoped to accepted friends via FriendRequestRepository
         // T-08-02: currentUser.getId() is from JWT — never from HTTP
         Page<UserBookEntity> page = friendRequestRepository.findFeedForFriends(
                 currentUser.getId(), pageable);
@@ -234,10 +139,6 @@ public class SocialService {
      * Get the friends-reading feed for the authenticated user — a paginated list of
      * CURRENTLY_READING shelf entries from accepted friends in either direction, ordered
      * by createdAt DESC.
-     *
-     * <p><strong>DISC-01 — Friends-reading discovery:</strong>
-     * Shows what friends are currently reading. Uses {@link FriendRequestRepository#findFriendsCurrentlyReading}
-     * which enforces bidirectional ACCEPTED friend semantics (T-15-02).
      *
      * <p>Feed is scoped to {@code currentUser.getId()} from JWT — no userId from HTTP (T-15-01).
      *

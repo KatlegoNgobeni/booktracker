@@ -136,6 +136,17 @@ public interface FriendRequestRepository extends JpaRepository<FriendRequestEnti
            "  AND fr.status = 'ACCEPTED'")
     List<FriendRequestEntity> findAcceptedRelationships(@Param("userId") UUID userId);
 
+    /**
+     * Count accepted mutual friends for a user in either direction.
+     *
+     * @param userId UUID of the user
+     * @return number of ACCEPTED friend_requests rows where the user is requester or recipient
+     */
+    @Query("SELECT COUNT(fr) FROM FriendRequestEntity fr " +
+           "WHERE (fr.requester.id = :userId OR fr.recipient.id = :userId) " +
+           "AND fr.status = 'ACCEPTED'")
+    long countAcceptedFriends(@Param("userId") UUID userId);
+
     @Query(
         value =
             "SELECT ub FROM UserBookEntity ub " +
