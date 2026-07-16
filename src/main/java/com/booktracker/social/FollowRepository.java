@@ -1,8 +1,5 @@
 package com.booktracker.social;
 
-import com.booktracker.shelf.UserBookEntity;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -18,15 +15,10 @@ import java.util.UUID;
  * (not a plain UUID column), derived names like {@code findByFollowerIdAndFolloweeId} are
  * ambiguous — explicit JPQL is unambiguous.
  *
- * <p><strong>Feed query placement (RESEARCH Anti-Pattern, Pitfall 3):</strong>
- * The {@link #findFeedForUser} method lives here (not in {@code ShelfRepository}) because
- * the feed is a social feature joining {@code follows → user_books}. Adding it to
- * {@code ShelfRepository} would couple the shelf layer to the social layer.
- *
- * <p><strong>JOIN FETCH + countQuery (RESEARCH Pitfall 2):</strong>
- * The feed query uses {@code JOIN FETCH ub.book} and {@code JOIN FETCH ub.user} with an
- * explicit {@code countQuery} — required because Hibernate 6 cannot auto-derive a count
- * query from a JPQL with JOIN FETCH clauses.
+ * <p><strong>Feed query:</strong>
+ * The activity feed is now served by
+ * {@link FriendRequestRepository#findFeedForFriends} (accepted friends, bidirectional)
+ * and {@link FriendRequestRepository#findFriendsCurrentlyReading} (DISC-01).
  */
 public interface FollowRepository extends JpaRepository<FollowEntity, UUID> {
 
@@ -79,43 +71,4 @@ public interface FollowRepository extends JpaRepository<FollowEntity, UUID> {
     @Query("SELECT COUNT(f) FROM FollowEntity f WHERE f.follower.id = :followerId")
     long countByFollowerId(@Param("followerId") UUID followerId);
 
-    /**
-     * Activity feed — paginated list of READ user_books from users followed by {@code userId}.
-     *
-     * <p>JOIN FETCHes both {@code ub.book} and {@code ub.user} (both are {@code @ManyToOne}
-     * on {@link UserBookEntity}) to prevent N+1 queries when mapping to
-     * {@link FeedItemDto} (RESEARCH Database Query Patterns / Feed Query Analysis).
-     *
-     * <p><strong>countQuery is mandatory (RESEARCH Pitfall 2):</strong> Hibernate 6 cannot
-     * auto-derive a count query from a JPQL with JOIN FETCH. The explicit {@code countQuery}
-     * omits JOIN FETCH (not needed for counting) and ORDER BY (not valid in count queries).
-     *
-     * <p>Result is ordered by {@code ub.dateFinished DESC} so the most recently finished
-     * books appear first — the V2 composite index covers this sort efficiently.
-     *
-     * <p><strong>Scoped by JWT (T-08-02):</strong> The {@code :userId} parameter is always
-     * {@code currentUser.getId()} from {@code @AuthenticationPrincipal} in
-     * {@link SocialService#getFeed} — never from the HTTP request.
-     *
-     * @param userId   the authenticated user's UUID (from JWT)
-     * @param pageable page/size/sort
-     * @return paginated READ entries from followed users, ordered by dateFinished DESC
-     */
-    @Query(
-        value = "SELECT ub FROM UserBookEntity ub " +
-                "JOIN FETCH ub.book " +
-                "JOIN FETCH ub.user " +
-                "WHERE ub.user.id IN " +
-                "  (SELECT f.followee.id FROM FollowEntity f WHERE f.follower.id = :userId) " +
-                "AND ub.shelfStatus = 'READ' " +
-                "AND ub.dateFinished IS NOT NULL " +
-                "ORDER BY ub.dateFinished DESC",
-        countQuery =
-                "SELECT COUNT(ub) FROM UserBookEntity ub " +
-                "WHERE ub.user.id IN " +
-                "  (SELECT f.followee.id FROM FollowEntity f WHERE f.follower.id = :userId) " +
-                "AND ub.shelfStatus = 'READ' " +
-                "AND ub.dateFinished IS NOT NULL"
-    )
-    Page<UserBookEntity> findFeedForUser(@Param("userId") UUID userId, Pageable pageable);
 }

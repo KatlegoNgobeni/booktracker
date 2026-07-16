@@ -230,6 +230,29 @@ public class SocialService {
         return page.map(this::toFeedItemDto);
     }
 
+    /**
+     * Get the friends-reading feed for the authenticated user — a paginated list of
+     * CURRENTLY_READING shelf entries from accepted friends in either direction, ordered
+     * by createdAt DESC.
+     *
+     * <p><strong>DISC-01 — Friends-reading discovery:</strong>
+     * Shows what friends are currently reading. Uses {@link FriendRequestRepository#findFriendsCurrentlyReading}
+     * which enforces bidirectional ACCEPTED friend semantics (T-15-02).
+     *
+     * <p>Feed is scoped to {@code currentUser.getId()} from JWT — no userId from HTTP (T-15-01).
+     *
+     * @param pageable    page/size for the feed
+     * @param currentUser the authenticated user (from @AuthenticationPrincipal — T-15-01)
+     * @return paginated {@link FriendsReadingItemDto} list from accepted friends
+     */
+    @Transactional(readOnly = true)
+    public Page<FriendsReadingItemDto> getFriendsCurrentlyReading(Pageable pageable, UserEntity currentUser) {
+        // T-15-01: currentUser.getId() is from JWT — never from HTTP
+        Page<UserBookEntity> page = friendRequestRepository.findFriendsCurrentlyReading(
+                currentUser.getId(), pageable);
+        return page.map(this::toFriendsReadingItemDto);
+    }
+
     // ----------------------------------------------------------------
     // Private helpers
     // ----------------------------------------------------------------
@@ -288,10 +311,32 @@ public class SocialService {
     }
 
     /**
+     * Map a {@link UserBookEntity} to a {@link FriendsReadingItemDto}.
+     *
+     * <p>Both {@code ub.book} and {@code ub.user} must be loaded (not lazy proxies) —
+     * ensured by the JOIN FETCH in {@link FriendRequestRepository#findFriendsCurrentlyReading}.
+     * The short olKey strips {@code /works/} prefix per project convention.
+     * Does NOT include rating, review, or dateFinished — not applicable for CURRENTLY_READING.
+     */
+    private FriendsReadingItemDto toFriendsReadingItemDto(UserBookEntity ub) {
+        var book = ub.getBook();
+        var user = ub.getUser();
+        return new FriendsReadingItemDto(
+                ub.getId().toString(),
+                user.getId().toString(),
+                user.getDisplayName(),
+                book.getTitle(),
+                book.getOpenLibraryKey().replaceFirst("^/works/", ""),
+                book.getCoverId(),
+                book.getAuthors()
+        );
+    }
+
+    /**
      * Map a {@link UserBookEntity} to a {@link FeedItemDto}.
      *
      * <p>Both {@code ub.book} and {@code ub.user} must be loaded (not lazy proxies) —
-     * ensured by the JOIN FETCH in {@link FollowRepository#findFeedForUser}.
+     * ensured by the JOIN FETCH in {@link FriendRequestRepository#findFeedForFriends}.
      * The short olKey strips {@code /works/} prefix per project convention.
      */
     private FeedItemDto toFeedItemDto(UserBookEntity ub) {

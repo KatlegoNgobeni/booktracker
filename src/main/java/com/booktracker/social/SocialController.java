@@ -132,4 +132,26 @@ public class SocialController {
             @AuthenticationPrincipal UserEntity currentUser) {
         return socialService.getFeed(pageable, currentUser);
     }
+
+    /**
+     * GET /api/feed/friends-reading — get what accepted friends are currently reading.
+     *
+     * <p>Returns 200 OK + paginated {@link FriendsReadingItemDto} list containing
+     * CURRENTLY_READING entries from accepted friends in either direction, ordered by
+     * createdAt DESC. Returns an empty page when the current user has no accepted friends
+     * with active reads.
+     *
+     * <p>Feed is always scoped to the authenticated user (T-15-01 — no userId from HTTP).
+     * Content is restricted to bidirectional ACCEPTED friends (T-15-02).
+     *
+     * @param pageable    page/size for the feed (default page=0, size=20)
+     * @param currentUser the authenticated user (from JWT principal — T-15-01)
+     * @return paginated FriendsReadingItemDto list ordered by createdAt DESC
+     */
+    @GetMapping("/api/feed/friends-reading")
+    public Page<FriendsReadingItemDto> getFriendsReading(
+            Pageable pageable,
+            @AuthenticationPrincipal UserEntity currentUser) {
+        return socialService.getFriendsCurrentlyReading(pageable, currentUser);
+    }
 }
