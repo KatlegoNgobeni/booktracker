@@ -50,7 +50,7 @@ Full phase details: [.planning/milestones/v1.1-ROADMAP.md](.planning/milestones/
   - [x] 13-04-PLAN.md — MOB-05/06: fix broken items + MOB-06 SW self-update on-device verification
 - [x] **Phase 14: Stats Enrichment** - Streak callout card, pace trends, ahead/behind verdict; genre projections as sub-cuttable tail (completed 2026-07-15)
 - [x] **Phase 15: Social Discovery & Recommendations** - Letterboxd-style Feed tab with friends activity, trending books, follower/following count bug fix (completed 2026-07-16)
-- [ ] **Phase 16: Playwright E2E** - Automated auth smoke + core-loop journey + auth-boundary guard, green in CI (4 plans)
+- [x] **Phase 16: Playwright E2E** - Automated auth smoke + core-loop journey + auth-boundary guard, green in CI (4 plans) (completed 2026-07-18)
 - [ ] **Phase 17: Profile Photos** - Cloudinary-backed photo uploads replacing generated avatars (CUTTABLE — cut first under deadline pressure)
 - [ ] **Phase 18: Portfolio Close-out** - Interview-ready README, secret-scanned history, clean-clone verification, v1.2 tag (strictly last)
 
@@ -130,13 +130,14 @@ Plans:
   4. Two-user auth-boundary test proves no cross-user data appears after sign-out/sign-in (pins the v1.1 cache-leak fix)
   5. Suite runs green as a parallel GitHub Actions job — Chromium-only, PostgreSQL service container, trace-on-failure artifacts
 
-**Plans**: 4 plans
+**Plans**: 4/4 plans complete
 
 Plans:
-- [ ] 16-01-PLAN.md — E2E infrastructure: Playwright config, mock server, global setup/teardown, auth setup project, 4 data-testid additions (E2E-01)
-- [ ] 16-02-PLAN.md — Auth smoke spec: register, login valid, login invalid, logout (E2E-02)
-- [ ] 16-03-PLAN.md — Journey specs: reading loop (E2E-03) + two-user auth boundary (E2E-04)
-- [ ] 16-04-PLAN.md — GitHub Actions e2e job with PostgreSQL service container (E2E-05)
+
+- [x] 16-01-PLAN.md — E2E infrastructure: Playwright config, mock server, global setup/teardown, auth setup project, 4 data-testid additions (E2E-01)
+- [x] 16-02-PLAN.md — Auth smoke spec: register, login valid, login invalid, logout (E2E-02)
+- [x] 16-03-PLAN.md — Journey specs: reading loop (E2E-03) + two-user auth boundary (E2E-04)
+- [x] 16-04-PLAN.md — GitHub Actions e2e job with PostgreSQL service container (E2E-05)
 
 ### Phase 17: Profile Photos
 
@@ -189,6 +190,6 @@ Plans:
 | 13. Mobile Shakedown | v1.2 | 4/4 | Complete   | 2026-07-14 |
 | 14. Stats Enrichment | v1.2 | 2/2 | Complete   | 2026-07-15 |
 | 15. Social Discovery & Recommendations | v1.2 | 4/4 | Complete   | 2026-07-16 |
-| 16. Playwright E2E | v1.2 | 0/4 | Not started | - |
+| 16. Playwright E2E | v1.2 | 4/4 | Complete    | 2026-07-18 |
 | 17. Profile Photos | v1.2 | 0/? | Not started (CUTTABLE) | - |
 | 18. Portfolio Close-out | v1.2 | 0/? | Not started | - |
