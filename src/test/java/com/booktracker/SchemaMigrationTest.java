@@ -58,8 +58,8 @@ class SchemaMigrationTest {
     private DataSource dataSource;
 
     /**
-     * Asserts that the five tables defined in V1__initial_schema.sql are present
-     * in the Testcontainers Postgres 16 instance after Flyway migration.
+     * Asserts that the core domain tables defined in V1__initial_schema.sql are present
+     * after all Flyway migrations run. Note: follows table was dropped in V9.
      */
     @Test
     void v1MigrationCreatesAllFiveTables() throws SQLException {
@@ -74,8 +74,8 @@ class SchemaMigrationTest {
         }
 
         assertThat(foundTables)
-                .as("V1 migration must create all five domain tables")
-                .contains("users", "books", "user_books", "follows", "goals");
+                .as("Core domain tables must exist after all migrations")
+                .contains("users", "books", "user_books", "goals");
     }
 
     /**
