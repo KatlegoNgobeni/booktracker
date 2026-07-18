@@ -82,16 +82,24 @@ jobs:
           distribution: "temurin"
           cache: maven
 
-      - name: Build fat JAR (skip tests — verified in ci job)
-        # Backend tests already verified in the ci job — skipping here to save CI minutes.
-        run: mvn -DskipTests package -B -q
-
       - name: Set up Node 20
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: e2e/package-lock.json
+          cache-dependency-path: |
+            frontend/package-lock.json
+            e2e/package-lock.json
+
+      - name: Build frontend and copy into jar resources
+        # Mirrors the Dockerfile build: dist/ must be in src/main/resources/static/ before mvn package
+        run: |
+          cd frontend && npm ci && npm run build
+          mkdir -p ../src/main/resources/static
+          cp -r dist/. ../src/main/resources/static/
+
+      - name: Build fat JAR (skip tests — verified in ci job)
+        run: mvn -DskipTests package -B -q
 
       - name: Install E2E dependencies
         working-directory: e2e
