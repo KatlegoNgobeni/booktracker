@@ -32,7 +32,7 @@ e2e/playwright/.auth/
 e2e/playwright-report/
 e2e/test-results/
 e2e/node_modules/
-e2e/package-lock.json
+# e2e/package-lock.json — intentionally tracked for CI cache
 
 # Frontend build output copied into resources/static for jar packaging
 src/main/resources/static/
