@@ -26,3 +26,8 @@ docker-compose.override.yml
 # OS cruft
 .DS_Store
 Thumbs.db
+
+# Playwright E2E — auth state files, reports, and test result artifacts
+e2e/playwright/.auth/
+e2e/playwright-report/
+e2e/test-results/

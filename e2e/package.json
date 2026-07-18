@@ -1,0 +1,13 @@
+{
+  "name": "booktracker-e2e",
+  "version": "1.0.0",
+  "description": "Playwright E2E tests for BookTracker",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test --project=chromium",
+    "test:all": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
+  }
+}
