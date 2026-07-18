@@ -1,4 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   testDir: './tests',
@@ -15,8 +20,8 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
 
-  globalSetup: require.resolve('./global-setup'),
-  globalTeardown: require.resolve('./global-teardown'),
+  globalSetup: path.resolve(__dirname, './global-setup.ts'),
+  globalTeardown: path.resolve(__dirname, './global-teardown.ts'),
 
   projects: [
     {
