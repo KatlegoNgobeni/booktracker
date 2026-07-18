@@ -267,7 +267,7 @@ export function StatsPage() {
           <div className="grid grid-cols-2 gap-4">
             <Card>
               <CardContent className="p-4">
-                <p className="text-[28px] font-semibold">{stats.booksReadAllTime}</p>
+                <p className="text-[28px] font-semibold" data-testid="stat-books-all-time">{stats.booksReadAllTime}</p>
                 <p className="text-sm text-muted-foreground">Books read (all time)</p>
               </CardContent>
             </Card>

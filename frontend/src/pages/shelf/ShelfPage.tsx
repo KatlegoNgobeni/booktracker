@@ -64,6 +64,7 @@ function ShelfEntryCard({
   return (
     <Card
       className="cursor-pointer hover:bg-muted/50 transition-colors"
+      data-testid="shelf-entry-card"
       onClick={onClick}
     >
       <CardContent className="flex gap-3 p-3">

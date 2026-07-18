@@ -98,6 +98,7 @@ export function ProfilePage() {
         <Button
           variant="outline"
           className="w-full"
+          data-testid="logout-button"
           onClick={handleSignOut}
         >
           Sign Out

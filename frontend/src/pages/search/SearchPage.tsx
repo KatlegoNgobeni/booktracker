@@ -173,7 +173,7 @@ export function SearchPage() {
 
           {/* Results list */}
           {!booksPending && allBooks.length > 0 && (
-            <div className="space-y-3">
+            <div className="space-y-3" data-testid="book-search-results">
               {allBooks.map((book) => (
                 <Link
                   key={book.olKey}
