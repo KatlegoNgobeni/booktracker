@@ -10,9 +10,13 @@
  *
  * T-06-12: Only authenticated user's own /users/me is shown (server scopes to token subject)
  */
+import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { Camera, Loader2 } from 'lucide-react';
 import { clearAuthSession } from '../../lib/auth';
+import { api } from '../../lib/api';
+import { QUERY_KEYS } from '../../lib/queryKeys';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { usePublicProfile } from '../../hooks/useSocial';
 import { UserAvatar } from '../../components/shared/UserAvatar';
@@ -28,6 +32,36 @@ export function ProfilePage() {
   // AVATAR-06 dedupe: same QUERY_KEYS.me() cache entry as AppHeader — one fetch app-wide.
   const { data: me, isPending, isError, refetch } = useCurrentUser();
   const { data: socialProfile } = usePublicProfile(me?.id ?? '');
+
+  // Photo upload mutation — POST /users/me/photo with multipart/form-data (D-01/D-03)
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const fd = new FormData();
+      fd.append('file', file);
+      const r = await api.post('/users/me/photo', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return r.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.me() }),
+  });
+
+  // Photo remove mutation — DELETE /users/me/photo (D-03/D-08)
+  const removeMutation = useMutation({
+    mutationFn: async () => {
+      const r = await api.delete('/users/me/photo');
+      return r.data;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.me() }),
+  });
+
+  // Hidden file input ref — triggers native file picker (D-06)
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) uploadMutation.mutate(file);
+    e.target.value = '';
+  };
 
   function handleSignOut() {
     // Session teardown is centralized in lib/auth.ts (clearAuthSession):
@@ -71,13 +105,46 @@ export function ProfilePage() {
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-col items-center gap-3">
-            {/* AVATAR-01: generated avatar at the existing 64px footprint (UI-SPEC size map) */}
-            <UserAvatar
-              userId={me.id}
-              displayName={me.displayName}
-              className="h-16 w-16"
-              fallbackClassName="text-xl font-semibold"
-            />
+            {/* AVATAR-01: 64px avatar with upload overlay (D-06/D-07/D-08) */}
+            <div className="relative">
+              <UserAvatar
+                userId={me.id}
+                displayName={me.displayName}
+                className="h-16 w-16"
+                fallbackClassName="text-xl font-semibold"
+                photoUrl={me.photoUrl}
+              />
+              {uploadMutation.isPending ? (
+                <div className="absolute inset-0 rounded-full flex items-center justify-center bg-black/40">
+                  <Loader2 className="h-5 w-5 text-white animate-spin" />
+                </div>
+              ) : (
+                <button
+                  aria-label="Change profile photo"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute inset-0 rounded-full flex items-center justify-center bg-black/0 hover:bg-black/40 transition-colors group"
+                >
+                  <Camera className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 sm:opacity-30" />
+                </button>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+              />
+            </div>
+            {/* Remove photo link — only visible when a photo is set (D-08) */}
+            {me.photoUrl && (
+              <button
+                onClick={() => removeMutation.mutate()}
+                className="text-xs text-destructive hover:underline mt-2"
+                disabled={removeMutation.isPending}
+              >
+                {removeMutation.isPending ? 'Removing…' : 'Remove photo'}
+              </button>
+            )}
             <div className="text-center">
               <p className="text-xl font-semibold">{me.displayName}</p>
               <p className="text-sm text-muted-foreground">{me.email}</p>
