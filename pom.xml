@@ -140,6 +140,27 @@
             <version>4.2.1</version>
             <scope>test</scope>
         </dependency>
+
+        <!-- Cloudinary Java SDK (D-02 — official SDK for server-side proxy upload).
+             cloudinary-http45 uses Apache HttpClient 4.5; verified on Maven Central
+             (com.cloudinary, 13 versions, github.com/cloudinary/cloudinary_java).
+             Package Legitimacy Audit: APPROVED (RESEARCH.md). -->
+        <dependency>
+            <groupId>com.cloudinary</groupId>
+            <artifactId>cloudinary-http45</artifactId>
+            <version>1.39.0</version>
+        </dependency>
+
+        <!-- Apache Tika — magic-byte MIME type detection (PHOTO-03 security gate).
+             Server-side file type validation: tika-core reads actual file bytes,
+             not the spoofable Content-Type header (T-17-01 Tampering mitigation).
+             Verified on Maven Central: org.apache.tika, 72 versions, Apache Software Foundation.
+             Package Legitimacy Audit: APPROVED (RESEARCH.md). -->
+        <dependency>
+            <groupId>org.apache.tika</groupId>
+            <artifactId>tika-core</artifactId>
+            <version>3.3.1</version>
+        </dependency>
     </dependencies>
 
     <build>
