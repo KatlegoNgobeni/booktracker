@@ -51,8 +51,8 @@ Full phase details: [.planning/milestones/v1.1-ROADMAP.md](.planning/milestones/
 - [x] **Phase 14: Stats Enrichment** - Streak callout card, pace trends, ahead/behind verdict; genre projections as sub-cuttable tail (completed 2026-07-15)
 - [x] **Phase 15: Social Discovery & Recommendations** - Letterboxd-style Feed tab with friends activity, trending books, follower/following count bug fix (completed 2026-07-16)
 - [x] **Phase 16: Playwright E2E** - Automated auth smoke + core-loop journey + auth-boundary guard, green in CI (4 plans) (completed 2026-07-18)
-- [ ] **Phase 17: Profile Photos** - Cloudinary-backed photo uploads replacing generated avatars (CUTTABLE — cut first under deadline pressure)
-- [ ] **Phase 18: Portfolio Close-out** - Interview-ready README, secret-scanned history, clean-clone verification, v1.2 tag (strictly last)
+- [x] **Phase 17: Profile Photos** - Cloudinary-backed photo uploads replacing generated avatars (CUTTABLE — cut first under deadline pressure) (completed 2026-07-20)
+- [x] **Phase 18: Portfolio Close-out** - Interview-ready README, secret-scanned history, clean-clone verification, v1.2 tag (strictly last) (completed 2026-07-20)
 
 ## Phase Details
 
@@ -151,7 +151,13 @@ Plans:
   3. Oversize (>5MB) or non-image uploads are rejected with clear errors — validation is server-side (magic bytes), the endpoint is JWT-authenticated, and no Cloudinary credentials or presets are exposed to the client
   4. User can remove their photo and revert to the generated avatar
 
-**Plans**: TBD
+**Plans**: 3/3 plans complete
+
+- [x] 17-02-PLAN.md
+- [x] 17-03-PLAN.md
+
+- [x] 17-01-PLAN.md
+
 **UI hint**: yes
 
 ### Phase 18: Portfolio Close-out
@@ -167,7 +173,9 @@ Plans:
   4. A clean clone runs with `docker-compose up`, verified end-to-end
   5. Final `v1.2` tag is pushed against a verified live Render deploy (ordering: scan → clone test → screenshots → tag)
 
-**Plans**: TBD
+**Plans**: 1/1 plans complete
+
+- [x] 18-01-PLAN.md
 
 ## Progress
 
@@ -191,5 +199,5 @@ Plans:
 | 14. Stats Enrichment | v1.2 | 2/2 | Complete   | 2026-07-15 |
 | 15. Social Discovery & Recommendations | v1.2 | 4/4 | Complete   | 2026-07-16 |
 | 16. Playwright E2E | v1.2 | 4/4 | Complete    | 2026-07-18 |
-| 17. Profile Photos | v1.2 | 0/? | Not started (CUTTABLE) | - |
-| 18. Portfolio Close-out | v1.2 | 0/? | Not started | - |
+| 17. Profile Photos | v1.2 | 3/3 | Complete   | 2026-07-20 |
+| 18. Portfolio Close-out | v1.2 | 1/1 | Complete   | 2026-07-20 |

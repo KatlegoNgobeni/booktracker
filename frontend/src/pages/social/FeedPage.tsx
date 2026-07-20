@@ -27,6 +27,7 @@ import { DiscoveryBookCard } from '../../components/social/DiscoveryBookCard';
 import { useFeed, useFriendsReading } from '../../hooks/useSocial';
 import { useShelfList } from '../../hooks/useShelf';
 import { useStats } from '../../hooks/useStats';
+import { useBooksByGenre } from '../../hooks/useBooks';
 import { CURATED_TRENDING } from '../../lib/trending';
 import { formatRelativeDate } from '../../lib/utils';
 import type { FeedItem } from '../../types/api.types';
@@ -157,6 +158,9 @@ export function FeedPage() {
   // Optional genre subtitle
   const topGenre = statsData?.topGenre;
 
+  // Genre-based recommendations — only fires when topGenre is available
+  const { data: genreRecsData, isPending: genreRecsPending } = useBooksByGenre(topGenre ?? '');
+
   // Full-page loading state: only block render if both discovery + feed are pending
   if (feedIsPending && friendsReadingPending) {
     return (
@@ -228,6 +232,31 @@ export function FeedPage() {
               olKey={item.olKey}
             />
           ))}
+        </DiscoverySection>
+      )}
+
+      {/* Discovery: Recommended for you — genre-based picks from previously read books */}
+      {topGenre && (
+        <DiscoverySection
+          title="Recommended for you"
+          subtitle={`Because you like ${topGenre}`}
+        >
+          {genreRecsPending ? (
+            <InlineSkeletonRow />
+          ) : (genreRecsData ?? []).length > 0 ? (
+            (genreRecsData ?? []).map((book) => (
+              <DiscoveryBookCard
+                key={book.olKey}
+                title={book.title}
+                coverId={book.coverId}
+                olKey={book.olKey}
+              />
+            ))
+          ) : (
+            <p className="text-xs text-muted-foreground py-2 px-1 flex-shrink-0">
+              No recommendations available right now.
+            </p>
+          )}
         </DiscoverySection>
       )}
 

@@ -38,9 +38,7 @@ export function ProfilePage() {
     mutationFn: async (file: File) => {
       const fd = new FormData();
       fd.append('file', file);
-      const r = await api.post('/users/me/photo', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const r = await api.post('/users/me/photo', fd);
       return r.data;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.me() }),

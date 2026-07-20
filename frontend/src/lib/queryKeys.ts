@@ -28,6 +28,8 @@ export const QUERY_KEYS = {
   pendingReceived: (): readonly string[] => ['pendingReceived'],
   // Discovery feed keys (Phase 15 — DISC-01)
   friendsReading: (): readonly string[] => ['friendsReading'],
+  // Genre-based recommendations (Feed page — not reused with infinite search key)
+  genreRecommendations: (genre: string): readonly string[] => ['genre-recs', genre],
   // Notification keys (Phase 9 — NOTIF-02/03)
   notifications: (): readonly string[] => ['notifications'],
   notificationsUnreadCount: (): readonly string[] => ['notifications', 'unread-count'],

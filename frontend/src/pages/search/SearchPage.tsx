@@ -69,7 +69,9 @@ export function SearchPage() {
     return () => clearTimeout(timer);
   }, [inputValue]);
 
-  // Only fire the active tab's query — gate inactive tab with empty string
+  // Minimum 2 chars before firing — 1-char queries reliably fail on Open Library
+  const searchEnabled = query.trim().length >= 2;
+
   const {
     data: bookData,
     isPending: booksPending,
@@ -78,14 +80,14 @@ export function SearchPage() {
     isFetchingNextPage,
     isError: booksError,
     refetch: refetchBooks,
-  } = useBookSearch(activeTab === 'books' ? query : '');
+  } = useBookSearch(activeTab === 'books' && searchEnabled ? query : '');
 
   const {
     data: peopleData,
     isPending: peoplePending,
     isError: peopleError,
     refetch: refetchPeople,
-  } = useUserSearch(activeTab === 'people' ? query : '');
+  } = useUserSearch(activeTab === 'people' && searchEnabled ? query : '');
 
   const allBooks = bookData?.pages.flat() ?? [];
   const people = peopleData?.content ?? [];
@@ -132,7 +134,7 @@ export function SearchPage() {
       {activeTab === 'books' && (
         <>
           {/* Empty state — no query entered yet */}
-          {!query && (
+          {query.trim().length === 0 && (
             <div className="text-center py-12">
               <h2 className="text-xl font-semibold">Find your next book</h2>
               <p className="text-sm text-muted-foreground mt-2">
@@ -141,8 +143,15 @@ export function SearchPage() {
             </div>
           )}
 
+          {/* Keep typing hint — 1-char queries fail on Open Library */}
+          {query.trim().length === 1 && (
+            <div className="text-center py-12">
+              <p className="text-sm text-muted-foreground">Keep typing to search…</p>
+            </div>
+          )}
+
           {/* Loading skeleton — 3 placeholder cards (UI-SPEC) */}
-          {query && booksPending && (
+          {searchEnabled && booksPending && (
             <div className="space-y-3" aria-label="Loading results">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="animate-pulse flex gap-3 p-3 rounded-lg border">
@@ -210,7 +219,7 @@ export function SearchPage() {
           )}
 
           {/* Empty results state — query submitted but returned nothing */}
-          {query && !booksPending && !booksError && allBooks.length === 0 && (
+          {searchEnabled && !booksPending && !booksError && allBooks.length === 0 && (
             <div className="text-center py-12">
               <h2 className="text-xl font-semibold">No books found for that search</h2>
               <p className="text-sm text-muted-foreground mt-2">
@@ -241,7 +250,7 @@ export function SearchPage() {
       {activeTab === 'people' && (
         <>
           {/* Empty state — no query */}
-          {!query && (
+          {query.trim().length === 0 && (
             <div className="text-center py-12">
               <h2 className="text-xl font-semibold">Find readers</h2>
               <p className="text-sm text-muted-foreground mt-2">
@@ -250,8 +259,15 @@ export function SearchPage() {
             </div>
           )}
 
+          {/* Keep typing hint */}
+          {query.trim().length === 1 && (
+            <div className="text-center py-12">
+              <p className="text-sm text-muted-foreground">Keep typing to search…</p>
+            </div>
+          )}
+
           {/* Loading skeleton */}
-          {query && peoplePending && (
+          {searchEnabled && peoplePending && (
             <div className="space-y-3">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="flex items-center gap-3 p-3 rounded-lg border animate-pulse">
@@ -279,7 +295,7 @@ export function SearchPage() {
           )}
 
           {/* People results — non-clickable rows (D-06: no Link wrapper) */}
-          {query && !peoplePending && !peopleError && people.length > 0 && (
+          {searchEnabled && !peoplePending && !peopleError && people.length > 0 && (
             <div className="space-y-3">
               {people.map((user) => (
                 <PeopleResultRow key={user.id} user={user} />
@@ -288,7 +304,7 @@ export function SearchPage() {
           )}
 
           {/* Empty results — query submitted but no users found */}
-          {query && !peoplePending && !peopleError && people.length === 0 && (
+          {searchEnabled && !peoplePending && !peopleError && people.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-12">
               No readers found for that name. Try different keywords.
             </p>

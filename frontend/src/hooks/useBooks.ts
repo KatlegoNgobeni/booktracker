@@ -11,7 +11,7 @@
  * - invalidateQueries requires object form { queryKey: [...] }
  * - getNextPageParam receives (lastPage, allPages)
  */
-import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { QUERY_KEYS } from '../lib/queryKeys';
 import type { BookSearchResult, BookDetail, ShelfStatus, ShelfEntry, Page } from '../types/api.types';
@@ -65,6 +65,25 @@ export function useAddToShelf() {
       queryClient.setQueryData(['shelf', 'by-book', newEntry.olKey], newEntry);
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.shelf() });
     },
+  });
+}
+
+/**
+ * useBooksByGenre — one-shot query for genre-based recommendations on the Feed page.
+ *
+ * Uses a dedicated cache key (genre-recs) to avoid colliding with the infinite-query
+ * cache under QUERY_KEYS.search (different data shape: flat array vs InfiniteData).
+ */
+export function useBooksByGenre(genre: string) {
+  return useQuery({
+    queryKey: QUERY_KEYS.genreRecommendations(genre),
+    queryFn: () =>
+      api
+        .get<BookSearchResult[]>('/books/search', { params: { q: genre, page: 0, size: 10 } })
+        .then((r) => r.data),
+    enabled: genre.trim().length > 0,
+    staleTime: 1000 * 60 * 10,
+    placeholderData: keepPreviousData,
   });
 }
 

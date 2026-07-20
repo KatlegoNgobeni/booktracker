@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Mobile Shakedown & Close-out
-current_phase: 17
-current_phase_name: Profile Photos
+current_phase: 18
+current_phase_name: portfolio-close-out
 status: executing
-stopped_at: Phase 16 UI-SPEC approved
-last_updated: "2026-07-18T18:11:32.628Z"
-last_activity: 2026-07-18
-last_activity_desc: Phase 16 complete, transitioned to Phase 17
+stopped_at: Phase 18 Plan 01 complete
+last_updated: "2026-07-20T20:33:47.163Z"
+last_activity: 2026-07-20
+last_activity_desc: Phase 18 execution started
 progress:
   total_phases: 6
-  completed_phases: 4
-  total_plans: 14
-  completed_plans: 14
-  percent: 67
+  completed_phases: 6
+  total_plans: 18
+  completed_plans: 18
+  percent: 100
 ---
 
 # Project State
@@ -24,14 +24,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-13)
 
 **Core value:** A working reading-tracker you actually use on your phone, plus the ability to confidently whiteboard and extend every layer in an Entelect/BBD interview.
-**Current focus:** Phase 17 — profile-photos
+**Current focus:** Phase 18 — portfolio-close-out
 
 ## Current Position
 
-Phase: 17 — Profile Photos
-Plan: Not started
-Status: Ready to plan Phase 17
-Last activity: 2026-07-18 — Phase 16 complete, transitioned to Phase 17
+Phase: 18 (portfolio-close-out) — EXECUTING
+Plan: 1 of 1 — COMPLETE
+Status: Phase 18 Plan 01 complete — awaiting v1.2 tag
+Last activity: 2026-07-20 — Phase 18 Plan 01: interview-ready README + secret scan
 
 Progress: [████████████████████] 14/14 plans (100%)
 
@@ -86,6 +86,11 @@ v1.2 roadmap decisions (from research, 2026-07-13):
 - reading_activity stores dates only (anti-forgery) — pace trends framed as finish-rate/activity-density, never page-delta history
 - All new user-specific server state goes through TanStack Query, or its cleanup joins clearAuthSession in the same commit (milestone rule)
 - [Phase ?]: JPQL string literal CURRENTLY_READING (not enum ref) for bidirectional friends-reading query with mandatory explicit countQuery
+- [Phase ?]: D-04: Store Cloudinary secure_url directly in DB; not public_id
+- [Phase ?]: Apache Tika magic-byte MIME detection (not Content-Type); HEIC/HEIF allowed for iOS
+- [Phase ?]: @WebMvcTest photo endpoints: SecurityMockMvcRequestPostProcessors.user(UserEntity) + csrf() required
+- [Phase ?]: photoUrl propagated through all 6 social/notification DTOs (D-11: null when no photo set)
+- [Phase ?]: Cloudinary test stubs added to test application.properties so @SpringBootTest integration tests can boot without CLOUDINARY_* env vars
 
 ### Pending Todos
 
@@ -114,10 +119,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-07-18
-Stopped at: Phase 16 complete — 8/8 Playwright tests passing in CI, UAT verified
+Last session: 2026-07-20T20:33:47.155Z
+Stopped at: Phase 17 Plan 02 complete
 Resume file: None
-Next action: /gsd-discuss-phase 17 or /gsd-plan-phase 17
+Next action: Verify clean-clone (DOCS-04), then push v1.2 tag (DOCS-05)
 
 ## Performance Metrics
 
@@ -140,6 +145,10 @@ Next action: /gsd-discuss-phase 17 or /gsd-plan-phase 17
 | Phase 15 P01 | 7min | 3 tasks | 3 files |
 | Phase 15 P02 | 4min | 2 tasks | 5 files |
 | Phase 15 P03 | 5min | 2 tasks | 3 files |
+| Phase 17 P01 | 8min | 3 tasks | 12 files |
+| Phase 17 P02 | 10min | 4 tasks | 12 files |
+| Phase 17 P03 | 3min | 4 tasks | 8 files |
+| Phase 18 P01 | 8min | 4 tasks | 3 files |
 
 ## Quick Tasks Completed
 
