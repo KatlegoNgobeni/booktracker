@@ -64,7 +64,7 @@ class UserControllerTest {
     void getMeSuccess_returnsUserProfile() throws Exception {
         OffsetDateTime now = OffsetDateTime.now();
         String userId = "00000000-0000-0000-0000-000000000001";
-        UserResponseDto dto = new UserResponseDto(userId, "me@example.com", "My Name", now);
+        UserResponseDto dto = new UserResponseDto(userId, "me@example.com", "My Name", now, null);
 
         when(userService.getUserById(any())).thenReturn(dto);
 
@@ -84,7 +84,7 @@ class UserControllerTest {
     void getMeResponse_containsNoPasswordField() throws Exception {
         OffsetDateTime now = OffsetDateTime.now();
         String userId = "00000000-0000-0000-0000-000000000001";
-        UserResponseDto dto = new UserResponseDto(userId, "me@example.com", "My Name", now);
+        UserResponseDto dto = new UserResponseDto(userId, "me@example.com", "My Name", now, null);
 
         when(userService.getUserById(any())).thenReturn(dto);
 

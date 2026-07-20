@@ -26,6 +26,9 @@ class UserServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private CloudinaryService cloudinaryService;
+
     @InjectMocks
     private UserService userService;
 
@@ -96,8 +99,8 @@ class UserServiceTest {
         UserResponseDto dto = userService.getUserById(sampleId);
 
         // UserResponseDto is a record — verify it has no password component
-        // The record fields are id, email, displayName, createdAt
-        assertThat(dto.getClass().getRecordComponents()).hasSize(4);
+        // The record fields are id, email, displayName, createdAt, photoUrl (Phase 17)
+        assertThat(dto.getClass().getRecordComponents()).hasSize(5);
         for (var component : dto.getClass().getRecordComponents()) {
             assertThat(component.getName()).doesNotContainIgnoringCase("password");
             assertThat(component.getName()).doesNotContainIgnoringCase("hash");

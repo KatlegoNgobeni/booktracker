@@ -1,14 +1,18 @@
 package com.booktracker.user;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.util.UUID;
 
 /**
- * Service for user profile reads and Spring Security's UserDetailsService contract.
+ * Service for user profile reads, writes, and Spring Security's UserDetailsService contract.
  *
  * <p><strong>UserDetailsService contract (D-06):</strong> {@code loadUserByUsername(String)}
  * receives the UUID string from the JWT {@code sub} claim, parses it to a {@link UUID},
@@ -16,15 +20,21 @@ import java.util.UUID;
  * used by both the {@code JwtAuthenticationFilter} and the {@code DaoAuthenticationProvider}.
  *
  * <p><strong>getUserById:</strong> Returns a {@link UserResponseDto} with
- * id, email, displayName, createdAt — no password hash (D-10, T-02-07).
+ * id, email, displayName, createdAt, photoUrl — no password hash (D-10, T-02-07).
+ *
+ * <p><strong>Photo endpoints (Phase 17):</strong> {@code uploadProfilePhoto} and
+ * {@code removeProfilePhoto} are {@code @Transactional} write methods that update
+ * {@code profile_photo_url} on the users table and return the updated DTO.
  */
 @Service
 public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
+    private final CloudinaryService cloudinaryService;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, CloudinaryService cloudinaryService) {
         this.userRepository = userRepository;
+        this.cloudinaryService = cloudinaryService;
     }
 
     /**
@@ -51,7 +61,7 @@ public class UserService implements UserDetailsService {
      * <p>Used by {@code UserController.me()} to serve GET /api/users/me.
      *
      * @param id the user's UUID
-     * @return DTO with id, email, displayName, createdAt — never the password hash
+     * @return DTO with id, email, displayName, createdAt, photoUrl — never the password hash
      * @throws UsernameNotFoundException if no user with that ID exists
      */
     public UserResponseDto getUserById(UUID id) {
@@ -61,7 +71,77 @@ public class UserService implements UserDetailsService {
                 user.getId().toString(),
                 user.getEmail(),
                 user.getDisplayName(),
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                user.getProfilePhotoUrl()
+        );
+    }
+
+    /**
+     * Uploads an image to Cloudinary and persists the resulting URL (Phase 17, PHOTO-01).
+     *
+     * <p>Validation (magic bytes + size) has already been performed by
+     * {@link UserController} before this method is called. The {@code imageBytes}
+     * parameter is the same buffer used for the Tika MIME check.
+     *
+     * <p><strong>T-17-04 (IDOR):</strong> The userId comes from
+     * {@code @AuthenticationPrincipal} in the controller — never from a request parameter.
+     *
+     * <p><strong>T-17-06:</strong> Cloudinary credentials are injected into
+     * {@link CloudinaryService} via the {@code Cloudinary} bean; they never appear
+     * in the returned DTO.
+     *
+     * @param userId     the authenticated user's UUID
+     * @param imageBytes validated image bytes (MIME + size already checked)
+     * @return updated UserResponseDto with photoUrl set to the Cloudinary secure_url
+     * @throws ResponseStatusException 502 Bad Gateway if the Cloudinary upload fails
+     */
+    @Transactional
+    public UserResponseDto uploadProfilePhoto(UUID userId, byte[] imageBytes) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userId));
+        String secureUrl;
+        try {
+            secureUrl = cloudinaryService.uploadProfilePhoto(imageBytes, userId);
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Photo upload failed");
+        }
+        user.setProfilePhotoUrl(secureUrl);
+        userRepository.save(user);
+        return new UserResponseDto(
+                user.getId().toString(),
+                user.getEmail(),
+                user.getDisplayName(),
+                user.getCreatedAt(),
+                secureUrl
+        );
+    }
+
+    /**
+     * Removes the user's profile photo URL from the DB (Phase 17, PHOTO-04).
+     *
+     * <p>Sets {@code profile_photo_url = null} in the DB so the client reverts
+     * to the Dicebear-generated avatar fallback (D-11). The actual Cloudinary asset
+     * is not deleted — the deterministic {@code public_id} (profile_photos/{userId})
+     * is simply overwritten on the next upload (overwrite=true strategy).
+     *
+     * <p><strong>T-17-04 (IDOR):</strong> The userId comes from
+     * {@code @AuthenticationPrincipal} — never from a request parameter.
+     *
+     * @param userId the authenticated user's UUID
+     * @return updated UserResponseDto with photoUrl null
+     */
+    @Transactional
+    public UserResponseDto removeProfilePhoto(UUID userId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userId));
+        user.setProfilePhotoUrl(null);
+        userRepository.save(user);
+        return new UserResponseDto(
+                user.getId().toString(),
+                user.getEmail(),
+                user.getDisplayName(),
+                user.getCreatedAt(),
+                null
         );
     }
 }
