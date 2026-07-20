@@ -69,8 +69,8 @@ export function SearchPage() {
     return () => clearTimeout(timer);
   }, [inputValue]);
 
-  // Minimum 2 chars before firing — 1-char queries reliably fail on Open Library
-  const searchEnabled = query.trim().length >= 2;
+  // Minimum 3 chars before firing — Open Library returns 422 for 1-2 char queries
+  const searchEnabled = query.trim().length >= 3;
 
   const {
     data: bookData,
@@ -143,8 +143,8 @@ export function SearchPage() {
             </div>
           )}
 
-          {/* Keep typing hint — 1-char queries fail on Open Library */}
-          {query.trim().length === 1 && (
+          {/* Keep typing hint — Open Library requires 3+ chars */}
+          {query.trim().length > 0 && query.trim().length < 3 && (
             <div className="text-center py-12">
               <p className="text-sm text-muted-foreground">Keep typing to search…</p>
             </div>
@@ -259,8 +259,8 @@ export function SearchPage() {
             </div>
           )}
 
-          {/* Keep typing hint */}
-          {query.trim().length === 1 && (
+          {/* Keep typing hint — Open Library requires 3+ chars */}
+          {query.trim().length > 0 && query.trim().length < 3 && (
             <div className="text-center py-12">
               <p className="text-sm text-muted-foreground">Keep typing to search…</p>
             </div>
