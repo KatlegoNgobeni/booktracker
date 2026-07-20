@@ -37,6 +37,8 @@ interface Props {
   size?: 'sm' | 'default' | 'lg';
   className?: string;
   fallbackClassName?: string;
+  /** Cloudinary photo URL. When truthy, shown instead of the Dicebear fallback. */
+  photoUrl?: string | null;
 }
 
 export function UserAvatar({
@@ -45,14 +47,17 @@ export function UserAvatar({
   size = 'default',
   className,
   fallbackClassName,
+  photoUrl,
 }: Props) {
   return (
     <Avatar size={size} className={className}>
       {/* anonymous crossOrigin → real CORS 200s, NOT opaque responses —
           avoids Chrome opaque-response quota padding in the SW cache.
           Dicebear sends access-control-allow-origin: * (verified live).
+          Cloudinary also sends CORS headers when the resource is served with
+          crossOrigin="anonymous" (D-13 invariant — must not be removed).
           alt="" — decorative; the display name is always adjacent text. */}
-      <AvatarImage src={dicebearUrl(userId)} alt="" crossOrigin="anonymous" />
+      <AvatarImage src={photoUrl || dicebearUrl(userId)} alt="" crossOrigin="anonymous" />
       <AvatarFallback className={fallbackClassName}>
         {getInitials(displayName)}
       </AvatarFallback>
