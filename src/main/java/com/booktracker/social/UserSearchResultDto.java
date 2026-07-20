@@ -13,10 +13,12 @@ package com.booktracker.social;
  * @param requestId    UUID of the friend request row when {@code friendStatus} is
  *                     PENDING_SENT or PENDING_RECEIVED (so the frontend can accept/cancel);
  *                     null when NONE or ACCEPTED
+ * @param photoUrl     Cloudinary HTTPS URL for the user's profile photo; null when no photo is set
  */
 public record UserSearchResultDto(
         String id,
         String displayName,
         FriendStatus friendStatus,
-        String requestId
+        String requestId,
+        String photoUrl
 ) {}

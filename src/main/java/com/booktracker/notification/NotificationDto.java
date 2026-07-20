@@ -20,6 +20,7 @@ import java.time.OffsetDateTime;
  * @param entityId         UUID of the related resource (entry id, request id, etc.) — may be null
  * @param isRead           true if the user has marked all notifications as read since this was created
  * @param createdAt        ISO-8601 timestamp of when the notification was created
+ * @param actorPhotoUrl    Cloudinary HTTPS URL for the actor's profile photo; null when no photo is set
  */
 public record NotificationDto(
         String id,
@@ -28,5 +29,6 @@ public record NotificationDto(
         String actorDisplayName,
         String entityId,
         boolean isRead,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        String actorPhotoUrl
 ) {}

@@ -47,6 +47,7 @@ public class FeedItemDto {
     private String review;
     private LocalDate dateFinished;
     private OffsetDateTime createdAt;
+    private String photoUrl;
 
     public FeedItemDto(
             String entryId,
@@ -59,7 +60,8 @@ public class FeedItemDto {
             Integer rating,
             String review,
             LocalDate dateFinished,
-            OffsetDateTime createdAt) {
+            OffsetDateTime createdAt,
+            String photoUrl) {
         this.entryId = entryId;
         this.userId = userId;
         this.displayName = displayName;
@@ -71,6 +73,7 @@ public class FeedItemDto {
         this.review = review;
         this.dateFinished = dateFinished;
         this.createdAt = createdAt;
+        this.photoUrl = photoUrl;
     }
 
     // ----------------------------------------------------------------
@@ -119,5 +122,9 @@ public class FeedItemDto {
 
     public OffsetDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public String getPhotoUrl() {
+        return photoUrl;
     }
 }

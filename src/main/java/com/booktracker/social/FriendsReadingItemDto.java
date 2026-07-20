@@ -43,6 +43,7 @@ public class FriendsReadingItemDto {
     private String bookOlKey;
     private String bookCoverId;
     private String bookAuthors;
+    private String photoUrl;
 
     public FriendsReadingItemDto(
             String entryId,
@@ -51,7 +52,8 @@ public class FriendsReadingItemDto {
             String bookTitle,
             String bookOlKey,
             String bookCoverId,
-            String bookAuthors) {
+            String bookAuthors,
+            String photoUrl) {
         this.entryId = entryId;
         this.userId = userId;
         this.displayName = displayName;
@@ -59,6 +61,7 @@ public class FriendsReadingItemDto {
         this.bookOlKey = bookOlKey;
         this.bookCoverId = bookCoverId;
         this.bookAuthors = bookAuthors;
+        this.photoUrl = photoUrl;
     }
 
     // ----------------------------------------------------------------
@@ -91,5 +94,9 @@ public class FriendsReadingItemDto {
 
     public String getBookAuthors() {
         return bookAuthors;
+    }
+
+    public String getPhotoUrl() {
+        return photoUrl;
     }
 }

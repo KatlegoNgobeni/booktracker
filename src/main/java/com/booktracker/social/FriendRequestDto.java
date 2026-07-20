@@ -17,6 +17,7 @@ import java.time.OffsetDateTime;
  * @param requesterDisplayName display name of the requester (for pending-received widget)
  * @param status               current status: PENDING, ACCEPTED, REJECTED, or CANCELLED
  * @param createdAt            when the request was created
+ * @param requesterPhotoUrl    Cloudinary HTTPS URL for the requester's profile photo; null when no photo is set
  */
 public record FriendRequestDto(
         String id,
@@ -24,5 +25,6 @@ public record FriendRequestDto(
         String recipientId,
         String requesterDisplayName,
         String status,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        String requesterPhotoUrl
 ) {}

@@ -27,6 +27,7 @@ public class PublicProfileDto {
     private Double goalProgressPercent;
     private long booksReadThisYear;
     private Page<PublicShelfEntryDto> readEntries;
+    private String photoUrl;
 
     public PublicProfileDto(
             String userId,
@@ -35,7 +36,8 @@ public class PublicProfileDto {
             Integer goalTarget,
             Double goalProgressPercent,
             long booksReadThisYear,
-            Page<PublicShelfEntryDto> readEntries) {
+            Page<PublicShelfEntryDto> readEntries,
+            String photoUrl) {
         this.userId = userId;
         this.displayName = displayName;
         this.friendCount = friendCount;
@@ -43,6 +45,7 @@ public class PublicProfileDto {
         this.goalProgressPercent = goalProgressPercent;
         this.booksReadThisYear = booksReadThisYear;
         this.readEntries = readEntries;
+        this.photoUrl = photoUrl;
     }
 
     // ----------------------------------------------------------------
@@ -75,5 +78,9 @@ public class PublicProfileDto {
 
     public Page<PublicShelfEntryDto> getReadEntries() {
         return readEntries;
+    }
+
+    public String getPhotoUrl() {
+        return photoUrl;
     }
 }
