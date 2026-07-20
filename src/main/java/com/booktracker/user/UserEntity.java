@@ -61,6 +61,16 @@ public class UserEntity implements UserDetails {
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
+    /**
+     * Cloudinary HTTPS URL for the user's profile photo (Phase 17, D-04).
+     *
+     * <p>Null when no photo has been uploaded — client renders Dicebear fallback (D-11).
+     * Value is always a server-written Cloudinary {@code secure_url}; no user-supplied
+     * URLs are ever stored (T-17-05 Stored XSS mitigation).
+     */
+    @Column(name = "profile_photo_url")
+    private String profilePhotoUrl;
+
     /** Sets {@code createdAt} before the first persist if not already set. */
     @PrePersist
     protected void onCreate() {
@@ -153,5 +163,13 @@ public class UserEntity implements UserDetails {
 
     public void setCreatedAt(OffsetDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getProfilePhotoUrl() {
+        return profilePhotoUrl;
+    }
+
+    public void setProfilePhotoUrl(String profilePhotoUrl) {
+        this.profilePhotoUrl = profilePhotoUrl;
     }
 }
