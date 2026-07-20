@@ -180,7 +180,8 @@ public class NotificationService {
                 n.getActor().getDisplayName(),
                 n.getEntityId() != null ? n.getEntityId().toString() : null,
                 n.isRead(),
-                n.getCreatedAt()
+                n.getCreatedAt(),
+                n.getActor().getProfilePhotoUrl()
         );
     }
 }

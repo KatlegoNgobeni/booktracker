@@ -113,7 +113,8 @@ public class SocialService {
                 goalTarget,
                 goalProgressPercent,
                 booksReadThisYear,
-                readEntryDtos
+                readEntryDtos,
+                target.getProfilePhotoUrl()
         );
     }
 
@@ -229,7 +230,8 @@ public class SocialService {
                 book.getTitle(),
                 book.getOpenLibraryKey().replaceFirst("^/works/", ""),
                 book.getCoverId(),
-                book.getAuthors()
+                book.getAuthors(),
+                user.getProfilePhotoUrl()
         );
     }
 
@@ -254,7 +256,8 @@ public class SocialService {
                 ub.getRating() != null ? ub.getRating().intValue() : null,
                 ub.getReview(),
                 ub.getDateFinished(),
-                ub.getCreatedAt()
+                ub.getCreatedAt(),
+                user.getProfilePhotoUrl()
         );
     }
 }

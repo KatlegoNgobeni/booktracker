@@ -300,7 +300,8 @@ public class FriendRequestService {
                     user.getId().toString(),
                     user.getDisplayName(),
                     friendStatus,
-                    requestId
+                    requestId,
+                    user.getProfilePhotoUrl()
             );
         });
     }
@@ -331,7 +332,8 @@ public class FriendRequestService {
                 entity.getRecipient().getId().toString(),
                 entity.getRequester().getDisplayName(),
                 entity.getStatus(),
-                entity.getCreatedAt()
+                entity.getCreatedAt(),
+                entity.getRequester().getProfilePhotoUrl()
         );
     }
 }
