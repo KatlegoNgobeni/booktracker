@@ -28,6 +28,7 @@ export interface AuthResponse {
     email: string;
     displayName: string;
     createdAt: string; // ISO OffsetDateTime
+    photoUrl: string | null;
   };
 }
 
@@ -139,6 +140,7 @@ export interface PublicProfile {
   goalProgressPercent?: number;  // absent if no goal set; capped at 100.0
   booksReadThisYear: number;
   readEntries: Page<PublicShelfEntry>; // paginated READ shelf
+  photoUrl?: string | null;      // absent when no photo (@JsonInclude NON_NULL)
 }
 
 // Derived from FeedItemDto.java (@JsonInclude(NON_NULL))
@@ -154,6 +156,7 @@ export interface FeedItem {
   review: string | null;
   dateFinished: string;      // ISO date YYYY-MM-DD (relative timestamp)
   createdAt: string;         // ISO OffsetDateTime (entry creation time)
+  photoUrl?: string | null;  // absent when no photo (@JsonInclude NON_NULL)
 }
 
 /**
@@ -174,6 +177,7 @@ export interface FriendsReadingItem {
   bookOlKey: string;
   bookCoverId?: string | null;
   bookAuthors?: string | null;
+  photoUrl?: string | null;  // absent when no photo (@JsonInclude NON_NULL)
 }
 
 // ────────────────────────────────────────────────────────
@@ -194,6 +198,7 @@ export interface FriendRequest {
   requesterDisplayName: string;
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
   createdAt: string; // ISO OffsetDateTime
+  requesterPhotoUrl?: string | null;
 }
 
 // Derived from UserSearchResultDto.java
@@ -203,6 +208,7 @@ export interface UserSearchResult {
   displayName: string;
   friendStatus: FriendStatus;
   requestId?: string; // present when PENDING_SENT or PENDING_RECEIVED
+  photoUrl?: string | null;
 }
 
 // ────────────────────────────────────────────────────────
@@ -226,4 +232,5 @@ export interface NotificationDto {
   entityId: string | null; // entryId for FRIEND_FINISHED_BOOK / REVIEW_LIKED; null for friend events
   isRead: boolean;
   createdAt: string; // ISO OffsetDateTime
+  actorPhotoUrl?: string | null;
 }

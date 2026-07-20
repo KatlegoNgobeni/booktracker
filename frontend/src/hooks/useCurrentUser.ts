@@ -6,9 +6,8 @@
  * consumers read the same QUERY_KEYS.me() cache entry, so the app makes one
  * network call for identity regardless of how many surfaces render it.
  *
- * Infinite staleTime — identity (id, email, displayName) is immutable in MVP
- * (D-08: no profile editing endpoint exists), so the cached value never goes
- * stale within a session. This is safe ONLY because clearAuthSession
+ * Infinite staleTime — core identity (id, email, displayName) is immutable; photoUrl
+ * updates after upload/remove via invalidateQueries. This is safe ONLY because clearAuthSession
  * (lib/auth.ts) wipes the query cache at every auth boundary: voluntary
  * sign-out (ProfilePage), 401 forced logout (api.ts interceptor), and
  * defensively on login/register success (LoginPage/RegisterPage).
@@ -26,6 +25,7 @@ export interface UserMe {
   email: string;
   displayName: string;
   createdAt: string;
+  photoUrl: string | null;
 }
 
 export function useCurrentUser() {
