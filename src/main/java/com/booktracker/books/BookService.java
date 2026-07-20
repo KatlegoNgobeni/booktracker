@@ -148,7 +148,8 @@ public class BookService {
                 entity.getAuthors(),
                 entity.getCoverId(),
                 entity.getPageCount(),
-                entity.getFirstPublishYear()
+                entity.getFirstPublishYear(),
+                entity.getDescription()
         );
     }
 
@@ -181,6 +182,8 @@ public class BookService {
         } else {
             entity.setCoverId(null);
         }
+
+        entity.setDescription(work.getDescription());
 
         // STATS-07: persist Open Library subjects as pipe-delimited string; null if absent or empty.
         // varchar(1000) cap enforced by substring to match the V8 migration column limit.

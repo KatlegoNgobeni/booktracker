@@ -19,6 +19,7 @@ package com.booktracker.books;
  * @param coverId          Open Library cover image ID as String (nullable)
  * @param pageCount        number of pages (nullable — often absent from Open Library)
  * @param firstPublishYear first publication year (nullable)
+ * @param description      book blurb/summary from Open Library (nullable — often absent)
  */
 public record BookDetailDto(
         String olKey,
@@ -26,5 +27,6 @@ public record BookDetailDto(
         String authors,
         String coverId,
         Integer pageCount,
-        Integer firstPublishYear
+        Integer firstPublishYear,
+        String description
 ) {}

@@ -71,6 +71,10 @@ public class BookEntity {
     @Column(name = "first_publish_year")
     private Integer firstPublishYear;
 
+    /** Book blurb/summary from Open Library — nullable (absent for many works). */
+    @Column(columnDefinition = "text")
+    private String description;
+
     /**
      * Pipe-delimited Open Library subjects (e.g. {@code "Fiction|Literature|Classic"}).
      * Nullable — null means no subject data has been fetched yet. Empty string is never written.
@@ -149,6 +153,14 @@ public class BookEntity {
 
     public void setFirstPublishYear(Integer firstPublishYear) {
         this.firstPublishYear = firstPublishYear;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public String getSubjects() {
