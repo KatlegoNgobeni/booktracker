@@ -45,6 +45,7 @@ function FeedItemCard({ item }: { item: FeedItem }) {
         displayName={item.displayName}
         size="default"
         className="shrink-0"
+        photoUrl={item.photoUrl ?? null}
       />
 
       {/* Book cover — links to book detail */}

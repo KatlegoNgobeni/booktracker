@@ -38,7 +38,7 @@ function PeopleResultRow({ user }: { user: UserSearchResult }) {
   return (
     <div className="flex items-center gap-3 p-3 rounded-lg border bg-card">
       {/* AVATAR-05: generated avatar seeded by user UUID (initials fallback built in) */}
-      <UserAvatar userId={user.id} displayName={user.displayName} size="default" />
+      <UserAvatar userId={user.id} displayName={user.displayName} size="default" photoUrl={user.photoUrl ?? null} />
       <div className="flex-1 min-w-0">
         {/* T-09-16: plain JSX text — no dangerouslySetInnerHTML */}
         <p className="text-sm font-semibold text-foreground truncate">{user.displayName}</p>

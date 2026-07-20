@@ -28,6 +28,7 @@ function ProfileHeader({
   goalProgressPercent,
   booksReadThisYear,
   userId,
+  photoUrl,
 }: {
   displayName: string;
   friendCount: number;
@@ -35,13 +36,14 @@ function ProfileHeader({
   goalProgressPercent?: number;
   booksReadThisYear: number;
   userId: string;
+  photoUrl?: string | null;
 }) {
   return (
     <div className="flex flex-col gap-3 pb-3 border-b">
       <div className="flex items-start justify-between gap-3">
         {/* AVATAR-02: generated avatar (40px) leads the display name, gap-3 (UI-SPEC) */}
         <div className="flex items-center gap-3 min-w-0">
-          <UserAvatar userId={userId} displayName={displayName} size="lg" />
+          <UserAvatar userId={userId} displayName={displayName} size="lg" photoUrl={photoUrl ?? null} />
           <h1 className="text-xl font-semibold leading-tight">{displayName}</h1>
         </div>
       </div>
@@ -173,6 +175,7 @@ export function UserPublicProfilePage() {
         goalProgressPercent={profile.goalProgressPercent}
         booksReadThisYear={profile.booksReadThisYear}
         userId={profile.userId}
+        photoUrl={profile.photoUrl ?? null}
       />
 
       <div>

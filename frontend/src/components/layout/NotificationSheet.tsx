@@ -108,6 +108,7 @@ export function NotificationSheet({ open, onOpenChange }: NotificationSheetProps
                   displayName={notif.actorDisplayName}
                   size="default"
                   className="shrink-0"
+                  photoUrl={notif.actorPhotoUrl ?? null}
                 />
 
                 {/* Notification text + relative timestamp */}

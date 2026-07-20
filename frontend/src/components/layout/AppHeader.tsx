@@ -89,7 +89,7 @@ export function AppHeader() {
         <div className="flex items-center gap-2 min-w-0">
           {me && (
             <>
-              <UserAvatar userId={me.id} displayName={me.displayName} size="sm" />
+              <UserAvatar userId={me.id} displayName={me.displayName} size="sm" photoUrl={me.photoUrl ?? null} />
               <span className="text-sm font-semibold text-foreground truncate">
                 {me.displayName}
               </span>

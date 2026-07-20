@@ -29,11 +29,13 @@ function PendingRequestRow({
   requestId,
   requesterId,
   displayName,
+  photoUrl,
 }: {
   requestId: string;
   /** Requester's user UUID — seeds the generated avatar (AVATAR-05). */
   requesterId: string;
   displayName: string;
+  photoUrl?: string | null;
 }) {
   const acceptMutation = useAcceptFriendRequest(requestId);
   const rejectMutation = useRejectFriendRequest(requestId);
@@ -43,7 +45,7 @@ function PendingRequestRow({
     <div className="flex items-center gap-3 px-4 py-2 border-b last:border-b-0">
       {/* AVATAR-05: generated avatar seeded by requester UUID; T-09-16 — initials
           fallback derives from displayName via string split, no HTML injection */}
-      <UserAvatar userId={requesterId} displayName={displayName} size="sm" />
+      <UserAvatar userId={requesterId} displayName={displayName} size="sm" photoUrl={photoUrl ?? null} />
       <p className="flex-1 text-sm text-foreground min-w-0 truncate">
         <strong className="font-semibold">{displayName}</strong>
         {' '}wants to be your friend
@@ -92,6 +94,7 @@ export function PendingRequestsWidget() {
             requestId={req.id}
             requesterId={req.requesterId}
             displayName={req.requesterDisplayName}
+            photoUrl={req.requesterPhotoUrl ?? null}
           />
         ))}
       </div>
