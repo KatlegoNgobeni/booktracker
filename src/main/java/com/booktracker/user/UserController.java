@@ -12,12 +12,16 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+
+import jakarta.validation.Valid;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -63,6 +67,24 @@ public class UserController {
         // D-06: username = UUID string (from UserEntity.getUsername())
         UUID userId = UUID.fromString(userDetails.getUsername());
         return userService.getUserById(userId);
+    }
+
+    /**
+     * PATCH /api/users/me — update the authenticated user's display name and/or password.
+     *
+     * <p>All fields are optional; only supplied (non-null) fields are applied.
+     * Password change requires {@code currentPassword} to match the stored BCrypt hash.
+     *
+     * @param request     partial-update payload (validated)
+     * @param currentUser the authenticated user (from JWT principal)
+     * @return updated UserResponseDto
+     */
+    @PatchMapping("/me")
+    public ResponseEntity<UserResponseDto> updateMe(
+            @RequestBody @Valid UpdateUserRequest request,
+            @AuthenticationPrincipal UserEntity currentUser) {
+        UserResponseDto result = userService.updateUser(currentUser.getId(), request);
+        return ResponseEntity.ok(result);
     }
 
     /**

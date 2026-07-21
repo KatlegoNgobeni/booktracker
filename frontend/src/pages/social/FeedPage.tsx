@@ -155,11 +155,12 @@ export function FeedPage() {
   // WANT_TO_READ shelf entries (first 10)
   const wantToReadItems = wantToReadData?.pages?.flatMap((p) => p.content) ?? [];
 
-  // Optional genre subtitle
+  // topGenre from stats; fall back to 'Fiction' when no subject data exists for the user's reads
   const topGenre = statsData?.topGenre;
+  const effectiveGenre = topGenre ?? 'Fiction';
 
-  // Genre-based recommendations — only fires when topGenre is available
-  const { data: genreRecsData, isPending: genreRecsPending } = useBooksByGenre(topGenre ?? '');
+  // Genre-based recommendations — always fires (uses effectiveGenre as fallback)
+  const { data: genreRecsData, isPending: genreRecsPending } = useBooksByGenre(effectiveGenre);
 
   // Full-page loading state: only block render if both discovery + feed are pending
   if (feedIsPending && friendsReadingPending) {
@@ -235,12 +236,11 @@ export function FeedPage() {
         </DiscoverySection>
       )}
 
-      {/* Discovery: Recommended for you — genre-based picks from previously read books */}
-      {topGenre && (
-        <DiscoverySection
-          title="Recommended for you"
-          subtitle={`Because you like ${topGenre}`}
-        >
+      {/* Discovery: Recommended for you — always shown; uses topGenre or Fiction fallback */}
+      <DiscoverySection
+        title="Recommended for you"
+        subtitle={topGenre ? `Because you like ${topGenre}` : 'Popular picks'}
+      >
           {genreRecsPending ? (
             <InlineSkeletonRow />
           ) : (genreRecsData ?? []).length > 0 ? (
@@ -258,7 +258,6 @@ export function FeedPage() {
             </p>
           )}
         </DiscoverySection>
-      )}
 
       {/* Divider */}
       <div className="border-t my-4" />

@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -31,10 +32,14 @@ public class UserService implements UserDetailsService {
 
     private final UserRepository userRepository;
     private final CloudinaryService cloudinaryService;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, CloudinaryService cloudinaryService) {
+    public UserService(UserRepository userRepository,
+                       CloudinaryService cloudinaryService,
+                       PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.cloudinaryService = cloudinaryService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /**
@@ -142,6 +147,56 @@ public class UserService implements UserDetailsService {
                 user.getDisplayName(),
                 user.getCreatedAt(),
                 null
+        );
+    }
+
+    /**
+     * Partially updates the authenticated user's display name and/or password.
+     *
+     * <p>Rules:
+     * <ul>
+     *   <li>If {@code displayName} is non-null and non-blank, it is applied.</li>
+     *   <li>If {@code newPassword} is non-null, {@code currentPassword} must match the stored
+     *       BCrypt hash — returns 400 Bad Request if it doesn't (T-02-08).</li>
+     *   <li>At least one of {@code displayName} or {@code newPassword} must be provided.</li>
+     * </ul>
+     *
+     * @param userId  the authenticated user's UUID (from {@code @AuthenticationPrincipal})
+     * @param request the partial-update request
+     * @return updated UserResponseDto
+     */
+    @Transactional
+    public UserResponseDto updateUser(UUID userId, UpdateUserRequest request) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + userId));
+
+        boolean changed = false;
+
+        if (request.getDisplayName() != null && !request.getDisplayName().isBlank()) {
+            user.setDisplayName(request.getDisplayName().trim());
+            changed = true;
+        }
+
+        if (request.getNewPassword() != null) {
+            if (request.getCurrentPassword() == null
+                    || !passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current password is incorrect");
+            }
+            user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+            changed = true;
+        }
+
+        if (!changed) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No fields to update");
+        }
+
+        userRepository.save(user);
+        return new UserResponseDto(
+                user.getId().toString(),
+                user.getEmail(),
+                user.getDisplayName(),
+                user.getCreatedAt(),
+                user.getProfilePhotoUrl()
         );
     }
 }

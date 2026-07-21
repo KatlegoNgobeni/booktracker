@@ -17,7 +17,7 @@
  * - T-09-16: display names rendered via JSX text interpolation only; no dangerouslySetInnerHTML
  */
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
@@ -57,17 +57,28 @@ function PeopleResultRow({ user }: { user: UserSearchResult }) {
 // ────────────────────────────────────────────────────────
 
 export function SearchPage() {
-  const [activeTab, setActiveTab] = useState<'books' | 'people'>('books');
-  const [inputValue, setInputValue] = useState('');
-  const [query, setQuery] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'books' | 'people'>(
+    (searchParams.get('tab') as 'books' | 'people') ?? 'books'
+  );
+  const [inputValue, setInputValue] = useState(searchParams.get('q') ?? '');
+  const [query, setQuery] = useState(searchParams.get('q') ?? '');
 
-  // Debounce: update query 400ms after inputValue changes (D-13)
+  // Debounce: update query 400ms after inputValue changes, and sync to URL (D-13)
   useEffect(() => {
     const timer = setTimeout(() => {
       setQuery(inputValue);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (inputValue) next.set('q', inputValue); else next.delete('q');
+          return next;
+        },
+        { replace: true }
+      );
     }, 400);
     return () => clearTimeout(timer);
-  }, [inputValue]);
+  }, [inputValue, setSearchParams]);
 
   // Minimum 3 chars before firing — Open Library returns 422 for 1-2 char queries
   const searchEnabled = query.trim().length >= 3;
@@ -105,7 +116,11 @@ export function SearchPage() {
       {/* Tab bar — Books / People */}
       <Tabs
         value={activeTab}
-        onValueChange={(v) => setActiveTab(v as 'books' | 'people')}
+        onValueChange={(v) => {
+          const tab = v as 'books' | 'people';
+          setActiveTab(tab);
+          setSearchParams((prev) => { const next = new URLSearchParams(prev); next.set('tab', tab); return next; }, { replace: true });
+        }}
         className="mb-4"
       >
         <TabsList className="w-full">

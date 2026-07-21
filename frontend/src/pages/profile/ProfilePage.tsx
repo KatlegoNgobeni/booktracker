@@ -10,7 +10,7 @@
  *
  * T-06-12: Only authenticated user's own /users/me is shown (server scopes to token subject)
  */
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
 import { Camera, Loader2 } from 'lucide-react';
@@ -22,6 +22,7 @@ import { usePublicProfile } from '../../hooks/useSocial';
 import { UserAvatar } from '../../components/shared/UserAvatar';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
 import { Separator } from '../../components/ui/separator';
 
 export function ProfilePage() {
@@ -52,6 +53,65 @@ export function ProfilePage() {
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEYS.me() }),
   });
+
+  // Account settings form state
+  const [newDisplayName, setNewDisplayName] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [settingsError, setSettingsError] = useState('');
+  const [settingsSuccess, setSettingsSuccess] = useState('');
+
+  // PATCH /users/me mutation
+  const updateMutation = useMutation({
+    mutationFn: async (body: { displayName?: string; currentPassword?: string; newPassword?: string }) => {
+      const r = await api.patch('/users/me', body);
+      return r.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.me() });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setNewDisplayName('');
+      setSettingsError('');
+      setSettingsSuccess('Saved!');
+      setTimeout(() => setSettingsSuccess(''), 3000);
+    },
+    onError: (err: { response?: { data?: { message?: string } } }) => {
+      setSettingsError(err?.response?.data?.message ?? 'Update failed. Try again.');
+    },
+  });
+
+  function handleSettingsSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSettingsError('');
+    setSettingsSuccess('');
+
+    const body: { displayName?: string; currentPassword?: string; newPassword?: string } = {};
+
+    if (newDisplayName.trim()) body.displayName = newDisplayName.trim();
+
+    if (newPassword) {
+      if (newPassword !== confirmPassword) {
+        setSettingsError('New passwords do not match.');
+        return;
+      }
+      if (!currentPassword) {
+        setSettingsError('Enter your current password to change it.');
+        return;
+      }
+      body.currentPassword = currentPassword;
+      body.newPassword = newPassword;
+    }
+
+    if (!body.displayName && !body.newPassword) {
+      setSettingsError('Enter a new display name or a new password.');
+      return;
+    }
+
+    updateMutation.mutate(body);
+  }
 
   // Hidden file input ref — triggers native file picker (D-06)
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -153,6 +213,75 @@ export function ProfilePage() {
               </div>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Account Settings ── */}
+      <Card>
+        <CardContent className="p-4">
+          <h2 className="text-base font-semibold mb-4">Account Settings</h2>
+          <form onSubmit={handleSettingsSave} className="space-y-3">
+            <div>
+              <label className="text-sm font-medium text-foreground">Display name</label>
+              <Input
+                type="text"
+                placeholder={me.displayName}
+                value={newDisplayName}
+                onChange={(e) => setNewDisplayName(e.target.value)}
+                maxLength={50}
+                className="mt-1"
+              />
+            </div>
+
+            <Separator />
+
+            <p className="text-sm font-medium text-foreground">Change password</p>
+            <div>
+              <label className="text-xs text-muted-foreground">Current password</label>
+              <Input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">New password</label>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Confirm new password</label>
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+                className="mt-1"
+              />
+            </div>
+
+            {settingsError && (
+              <p className="text-sm text-destructive">{settingsError}</p>
+            )}
+            {settingsSuccess && (
+              <p className="text-sm text-green-600 dark:text-green-400">{settingsSuccess}</p>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={updateMutation.isPending}
+            >
+              {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save changes'}
+            </Button>
+          </form>
         </CardContent>
       </Card>
 
