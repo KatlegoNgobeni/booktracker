@@ -4,11 +4,11 @@ milestone: v1.2
 milestone_name: Mobile Shakedown & Close-out
 current_phase: 18
 current_phase_name: portfolio-close-out
-status: executing
-stopped_at: Phase 18 Plan 01 complete
-last_updated: "2026-07-20T20:33:47.163Z"
-last_activity: 2026-07-20
-last_activity_desc: Phase 18 execution started
+status: complete
+stopped_at: ~
+last_updated: "2026-07-21T00:00:00.000Z"
+last_activity: 2026-07-21
+last_activity_desc: "Post-Phase-18 fixes: photo upload, search min-length, genre recs, book description"
 progress:
   total_phases: 6
   completed_phases: 6
@@ -119,10 +119,10 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-07-20T20:33:47.155Z
-Stopped at: Phase 17 Plan 02 complete
+Last session: 2026-07-21T00:00:00.000Z
+Stopped at: milestone complete — v1.2 ready to tag
 Resume file: None
-Next action: Verify clean-clone (DOCS-04), then push v1.2 tag (DOCS-05)
+Next action: DOCS-05 — push v1.2 tag (git tag -a v1.2 -m "v1.2 Mobile Shakedown & Close-out" && git push origin v1.2)
 
 ## Performance Metrics
 
