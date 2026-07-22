@@ -4,6 +4,7 @@ import com.booktracker.security.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -87,6 +88,9 @@ public class SecurityConfig {
                 // Authentication for WebSocket connections happens at the STOMP CONNECT layer
                 // via JwtChannelInterceptor — NOT at the HTTP layer.
                 .requestMatchers("/ws/**").permitAll()
+                // COLL-03: GET /api/collections/{id} is publicly accessible for public collections;
+                // the CollectionService enforces private-collection 403 for non-owners.
+                .requestMatchers(HttpMethod.GET, "/api/collections/*").permitAll()
                 // T-07-01: gate all other /api/** paths behind JWT
                 .requestMatchers("/api/**").authenticated()
                 // Allow Spring Boot's /error endpoint so that ResponseStatusException
