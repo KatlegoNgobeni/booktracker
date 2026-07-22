@@ -1,20 +1,20 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.2
-milestone_name: Mobile Shakedown & Close-out
+milestone: v1.3
+milestone_name: Book Collections
 current_phase: 18
 current_phase_name: portfolio-close-out
-status: complete
-stopped_at: ~
-last_updated: "2026-07-21T00:00:00.000Z"
-last_activity: 2026-07-21
-last_activity_desc: "Post-Phase-18 fixes: photo upload, search min-length, genre recs, book description"
+status: planned
+stopped_at: context exhaustion at 76% (2026-07-22)
+last_updated: "2026-07-22T16:34:11.482Z"
+last_activity: 2026-07-20
+last_activity_desc: "Phase 18 Plan 01: interview-ready README + secret scan"
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 6
-  total_plans: 18
+  total_plans: 20
   completed_plans: 18
-  percent: 100
+  percent: 86
 ---
 
 # Project State
@@ -119,8 +119,8 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-07-21T00:00:00.000Z
-Stopped at: milestone complete — v1.2 ready to tag
+Last session: 2026-07-22T16:34:11.475Z
+Stopped at: context exhaustion at 76% (2026-07-22)
 Resume file: None
 Next action: DOCS-05 — push v1.2 tag (git tag -a v1.2 -m "v1.2 Mobile Shakedown & Close-out" && git push origin v1.2)
 

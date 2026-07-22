@@ -39,6 +39,10 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Run frontend unit tests (Vitest)
+        working-directory: frontend
+        run: npx vitest run
+
       - name: Build frontend (TypeScript + Vite)
         working-directory: frontend
         run: npm run build

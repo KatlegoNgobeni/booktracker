@@ -90,61 +90,72 @@ flowchart LR
 erDiagram
     users {
         uuid id PK
-        string email
-        string password_hash
-        string display_name
-        string photo_url
-        int reading_goal
+        varchar email UK
+        varchar password_hash
+        varchar display_name
+        varchar photo_url
+        timestamptz created_at
     }
     books {
         uuid id PK
-        string open_library_key
-        string title
-        string author
-        string cover_url
-        int page_count
+        varchar open_library_key UK
+        varchar title
+        varchar authors
+        varchar cover_id
+        integer page_count
+        integer first_publish_year
+        text description
     }
     user_books {
         uuid id PK
         uuid user_id FK
         uuid book_id FK
-        string shelf_status
-        int current_page
-        int rating
-        string review
+        varchar shelf_status
+        smallint rating
+        text review
+        integer current_page
+        date date_started
+        date date_finished
         date last_read_date
-    }
-    reading_activity {
-        uuid user_id FK
-        date activity_date
-        int pages_read
     }
     goals {
         uuid id PK
         uuid user_id FK
-        int year
-        int target_books
+        integer year
+        integer target_count
     }
     friend_requests {
         uuid id PK
-        uuid sender_id FK
-        uuid receiver_id FK
-        string status
+        uuid requester_id FK
+        uuid recipient_id FK
+        varchar status
+    }
+    review_likes {
+        uuid id PK
+        uuid user_id FK
+        uuid entry_id FK
     }
     notifications {
         uuid id PK
         uuid user_id FK
-        string type
-        string message
-        boolean read
+        varchar type
+        uuid actor_id
+        uuid entity_id
+        boolean is_read
+    }
+    reading_activity {
+        uuid user_id FK
+        date activity_date
     }
 
     users ||--o{ user_books : "shelves"
     books ||--o{ user_books : "shelved as"
-    users ||--o{ reading_activity : "logs"
     users ||--o{ goals : "sets"
-    users ||--o{ friend_requests : "sends"
+    users ||--o{ friend_requests : "sends/receives"
+    users ||--o{ review_likes : "likes"
+    user_books ||--o{ review_likes : "liked via"
     users ||--o{ notifications : "receives"
+    users ||--o{ reading_activity : "logs"
 ```
 
 ---

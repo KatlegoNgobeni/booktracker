@@ -4,7 +4,8 @@
 
 - ✅ **v1.0 MVP** — Phases 1–9 (shipped 2026-07-06)
 - ✅ **v1.1 Polish & Depth** — Phases 10–12 (shipped 2026-07-11)
-- 🚧 **v1.2 Mobile Shakedown & Close-out** — Phases 13–17 (in progress, hard deadline ~2026-07-20)
+- ✅ **v1.2 Mobile Shakedown & Close-out** — Phases 13–18 (shipped 2026-07-20)
+- 🚧 **v1.3 Book Collections** — Phase 19 (planned)
 
 ## Phases
 
@@ -177,9 +178,30 @@ Plans:
 
 - [x] 18-01-PLAN.md
 
+### Phase 19: Book Collections
+
+**Goal**: Users can create named lists of books (e.g., "Books That Changed My Mind", "Summer 2026 Reads") and add any book to one or more collections from the book detail page
+**Depends on**: Phase 18 (v1.2 complete)
+**Requirements**: COLL-01, COLL-02, COLL-03, COLL-04
+**Success Criteria** (what must be TRUE):
+
+  1. User can create, rename, and delete named collections; collections have a public/private flag
+  2. User can add or remove a book from any of their collections directly from the book detail page
+  3. CollectionsPage at /collections shows all of the user's collections with book counts
+  4. Ownership is enforced server-side: mutations return 403 when not the collection owner
+  5. All 9 backend integration test cases pass; TypeScript compiles with no errors
+
+**Plans**: 2/2 plans complete
+
+- [x] 19-01-PLAN.md — Backend: V12 migration, entities, repositories, service, controller, integration tests
+- [x] 19-02-PLAN.md — Frontend: api.types additions, useCollections hook, CollectionsPage, BookDetailPage "Add to Collection" sheet
+
+**UI hint**: yes
+
 ## Progress
 
 **Execution order (v1.2):** 13 → 14 → 15 → 16 → 17 (cuttable) → 18 (strictly last)
+**Execution order (v1.3):** 19-01 → 19-02
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -201,3 +223,4 @@ Plans:
 | 16. Playwright E2E | v1.2 | 4/4 | Complete    | 2026-07-18 |
 | 17. Profile Photos | v1.2 | 3/3 | Complete   | 2026-07-20 |
 | 18. Portfolio Close-out | v1.2 | 1/1 | Complete   | 2026-07-20 |
+| 19. Book Collections    | v1.3 | 2/2 | Complete   | 2026-07-22 |
