@@ -234,3 +234,26 @@ export interface NotificationDto {
   createdAt: string; // ISO OffsetDateTime
   actorPhotoUrl?: string | null;
 }
+
+// ────────────────────────────────────────────────────────
+// Collections types (Phase 19 — COLL-01/02/03/04)
+// Derived from: CollectionDto.java, CollectionDetailDto.java
+// ────────────────────────────────────────────────────────
+
+// Derived from CollectionDto.java
+export interface CollectionDto {
+  id: string;
+  name: string;
+  isPublic: boolean;
+  bookCount: number;
+  createdAt: string; // ISO OffsetDateTime
+}
+
+// Derived from CollectionDetailDto.java
+export interface CollectionDetail {
+  id: string;
+  name: string;
+  isPublic: boolean;
+  olKeys: string[];
+  createdAt: string;
+}

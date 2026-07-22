@@ -33,4 +33,7 @@ export const QUERY_KEYS = {
   // Notification keys (Phase 9 — NOTIF-02/03)
   notifications: (): readonly string[] => ['notifications'],
   notificationsUnreadCount: (): readonly string[] => ['notifications', 'unread-count'],
+  // Collections keys (Phase 19 — COLL-01/02/03/04)
+  collections: (): readonly string[] => ['collections'],
+  collectionDetail: (id: string): readonly string[] => ['collections', id],
 } as const;
