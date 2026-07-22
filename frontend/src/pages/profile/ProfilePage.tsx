@@ -11,14 +11,15 @@
  * T-06-12: Only authenticated user's own /users/me is shown (server scopes to token subject)
  */
 import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useQueryClient, useMutation } from '@tanstack/react-query';
-import { Camera, Loader2 } from 'lucide-react';
+import { Camera, Loader2, BookMarked, ChevronRight } from 'lucide-react';
 import { clearAuthSession } from '../../lib/auth';
 import { api } from '../../lib/api';
 import { QUERY_KEYS } from '../../lib/queryKeys';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { usePublicProfile } from '../../hooks/useSocial';
+import { useMyCollections } from '../../hooks/useCollections';
 import { UserAvatar } from '../../components/shared/UserAvatar';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
@@ -33,6 +34,7 @@ export function ProfilePage() {
   // AVATAR-06 dedupe: same QUERY_KEYS.me() cache entry as AppHeader — one fetch app-wide.
   const { data: me, isPending, isError, refetch } = useCurrentUser();
   const { data: socialProfile } = usePublicProfile(me?.id ?? '');
+  const { data: collections } = useMyCollections();
 
   // Photo upload mutation — POST /users/me/photo with multipart/form-data (D-01/D-03)
   const uploadMutation = useMutation({
@@ -213,6 +215,24 @@ export function ProfilePage() {
               </div>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Collections ── */}
+      <Card>
+        <CardContent className="p-4">
+          <Link to="/collections" className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <BookMarked className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">My Collections</p>
+                <p className="text-xs text-muted-foreground">
+                  {collections ? `${collections.length} collection${collections.length !== 1 ? 's' : ''}` : 'Named reading lists'}
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
         </CardContent>
       </Card>
 
