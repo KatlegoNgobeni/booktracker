@@ -19,6 +19,7 @@ import { StatsPage } from './pages/stats/StatsPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
 import { FeedPage } from './pages/social/FeedPage';
 import { UserPublicProfilePage } from './pages/social/UserPublicProfilePage';
+import { CollectionsPage } from './pages/collections/CollectionsPage';
 
 export default function App() {
   return (
@@ -39,6 +40,8 @@ export default function App() {
           {/* Social layer routes (Phase 8) */}
           <Route path="/feed" element={<FeedPage />} />
           <Route path="/users/:id" element={<UserPublicProfilePage />} />
+          {/* Collections (Phase 19) */}
+          <Route path="/collections" element={<CollectionsPage />} />
         </Route>
       </Route>
 
