@@ -213,7 +213,7 @@ export function FeedPage() {
           <DiscoveryBookCard
             key={book.olKey}
             title={book.title}
-            coverId={book.coverId}
+            coverId={null}
             olKey={book.olKey}
           />
         ))}

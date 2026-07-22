@@ -64,6 +64,7 @@ export function useAddToShelf() {
       // Seed by-book cache so useShelfEntryForBook works without a shelf list fetch.
       queryClient.setQueryData(['shelf', 'by-book', newEntry.olKey], newEntry);
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.shelf() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.stats() });
     },
   });
 }

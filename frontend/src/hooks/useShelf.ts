@@ -97,6 +97,7 @@ export function useUpdateShelfMetadata(id: string) {
       queryClient.setQueryData(['shelf', 'by-book', updatedEntry.olKey], updatedEntry);
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.shelf() });
       queryClient.invalidateQueries({ queryKey: ['shelf', 'entry', id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.stats() });
     },
   });
 }
@@ -117,6 +118,7 @@ export function useUpdateProgress(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.shelf() });
       queryClient.invalidateQueries({ queryKey: ['shelf', 'entry', id] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.stats() });
     },
   });
 }
@@ -134,6 +136,7 @@ export function useRemoveShelfEntry(id: string) {
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: ['shelf', 'by-book'] });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.shelf() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.stats() });
     },
   });
 }

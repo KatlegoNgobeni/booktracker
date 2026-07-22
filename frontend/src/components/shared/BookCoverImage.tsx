@@ -13,6 +13,7 @@ import { useState } from 'react';
 interface Props {
   coverId: string | null;
   title: string;
+  olKey?: string;   // fallback: OLID cover URL when coverId is null
   className?: string;
 }
 
@@ -23,11 +24,17 @@ function titleToHue(title: string): number {
   return 160 + (hash % 180); // 160..339
 }
 
-export function BookCoverImage({ coverId, title, className }: Props) {
+export function BookCoverImage({ coverId, title, olKey, className }: Props) {
   const [imgFailed, setImgFailed] = useState(false);
   const hue = titleToHue(title);
 
-  if (imgFailed || !coverId) {
+  const coverSrc = coverId
+    ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg`
+    : olKey
+    ? `https://covers.openlibrary.org/b/olid/${olKey}-M.jpg`
+    : null;
+
+  if (imgFailed || !coverSrc) {
     return (
       <div
         className={`flex items-center justify-center text-white font-semibold text-xl ${className ?? ''}`}
@@ -41,7 +48,7 @@ export function BookCoverImage({ coverId, title, className }: Props) {
 
   return (
     <img
-      src={`https://covers.openlibrary.org/b/id/${coverId}-M.jpg`}
+      src={coverSrc}
       alt={title}
       className={className}
       onError={() => setImgFailed(true)}

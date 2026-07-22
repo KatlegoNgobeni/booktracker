@@ -31,6 +31,7 @@ export function DiscoveryBookCard({ title, coverId, olKey }: DiscoveryBookCardPr
       <BookCoverImage
         key={coverId ?? olKey}
         coverId={coverId}
+        olKey={olKey}
         title={title}
         className="aspect-[2/3] w-24 object-cover rounded-md"
       />
