@@ -11,12 +11,132 @@
  */
 import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, BookmarkPlus } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { BookCoverImage } from '../../components/shared/BookCoverImage';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '../../components/ui/sheet';
 import { useBookDetail, useAddToShelf, useShelfEntryForBook } from '../../hooks/useBooks';
+import {
+  useMyCollections,
+  useCollectionDetail,
+  useAddBookToCollection,
+  useRemoveBookFromCollection,
+} from '../../hooks/useCollections';
 import type { ShelfStatus, ShelfEntry } from '../../types/api.types';
+
+// ── Add-to-Collection sheet ──────────────────────────────
+
+/**
+ * CollectionRow — one row in the Add to Collection sheet.
+ * Fetches detail on mount to check if the book's olKey is already in the collection.
+ */
+function CollectionRow({
+  collectionId,
+  collectionName,
+  olKey,
+}: {
+  collectionId: string;
+  collectionName: string;
+  olKey: string;
+}) {
+  const { data: detail, isPending } = useCollectionDetail(collectionId);
+  const addBook = useAddBookToCollection();
+  const removeBook = useRemoveBookFromCollection();
+
+  const isInCollection = detail?.olKeys.includes(olKey) ?? false;
+  const isBusy = addBook.isPending || removeBook.isPending || isPending;
+
+  const toggle = () => {
+    if (isInCollection) {
+      removeBook.mutate({ collectionId, olKey });
+    } else {
+      addBook.mutate({ collectionId, olKey });
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-3 py-2 border-b last:border-0">
+      <span className="text-sm font-medium truncate">{collectionName}</span>
+      <Button
+        variant={isInCollection ? 'secondary' : 'outline'}
+        size="sm"
+        onClick={toggle}
+        disabled={isBusy}
+        className="shrink-0"
+      >
+        {isPending ? (
+          <Loader2 className="animate-spin h-3 w-3" />
+        ) : isInCollection ? (
+          'Remove'
+        ) : (
+          'Add'
+        )}
+      </Button>
+    </div>
+  );
+}
+
+function AddToCollectionSheet({ olKey }: { olKey: string }) {
+  const [open, setOpen] = useState(false);
+  const { data: collections, isPending } = useMyCollections();
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="outline" className="w-full gap-2">
+          <BookmarkPlus className="h-4 w-4" />
+          Add to Collection
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="bottom" className="max-h-[60vh] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>Add to Collection</SheetTitle>
+        </SheetHeader>
+        <div className="px-4 pb-4">
+          {isPending ? (
+            <div className="space-y-3 pt-2">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-10 rounded bg-muted animate-pulse" />
+              ))}
+            </div>
+          ) : collections && collections.length > 0 ? (
+            <div className="pt-2">
+              {collections.map((col) => (
+                <CollectionRow
+                  key={col.id}
+                  collectionId={col.id}
+                  collectionName={col.name}
+                  olKey={olKey}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="py-6 text-center">
+              <p className="text-sm text-muted-foreground mb-3">No collections yet.</p>
+              <Button variant="outline" size="sm" asChild onClick={() => setOpen(false)}>
+                <Link to="/collections">Create a collection</Link>
+              </Button>
+            </div>
+          )}
+          {collections && collections.length > 0 && (
+            <div className="pt-3">
+              <Button variant="ghost" size="sm" asChild className="w-full text-muted-foreground" onClick={() => setOpen(false)}>
+                <Link to="/collections">+ Manage collections</Link>
+              </Button>
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
 
 const STATUS_LABELS: Record<ShelfStatus, string> = {
   WANT_TO_READ: 'Want to Read',
@@ -179,6 +299,11 @@ export function BookDetailPage() {
               ?.message ?? 'Could not add to shelf. Please try again.'}
           </p>
         )}
+
+        {/* Add to Collection — always shown below shelf actions */}
+        <div className="pt-2">
+          <AddToCollectionSheet olKey={olKey} />
+        </div>
       </div>
     </div>
   );
